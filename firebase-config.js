@@ -1,10 +1,10 @@
 // ============================================
-// FIREBASE CONFIG - ENGLISH: FEARS AND PHOBIAS
+// firebase-config.js - АБСОЛЮТНО ТОЧНАЯ ВЕРСИЯ
 // ============================================
 
-console.log("🔥 firebase-config.js загружается...");
+console.log("🔥 firebase-config.js: НАЧАЛО ЗАГРУЗКИ");
 
-// 🔥 НОВАЯ КОНФИГУРАЦИЯ FIREBASE
+// 🔥 КОНФИГУРАЦИЯ FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyBC4rcVKEMj88Dm2snG5XXxAuZqeNPMc3c",
   authDomain: "engk-5a74a.firebaseapp.com",
@@ -16,63 +16,56 @@ const firebaseConfig = {
   measurementId: "G-CJWPXGL2JQ"
 };
 
-// ✅ СОЗДАЁМ ГЛОБАЛЬНУЮ ПЕРЕМЕННУЮ ДЛЯ БД
-window.db = null;
+// ===== ПРОВЕРКА ЗАГРУЗКИ FIREBASE SDK =====
+console.log("📊 Проверка Firebase SDK:");
+console.log("   - firebase глобально:", typeof firebase !== 'undefined' ? '✅ ДА' : '❌ НЕТ');
 
-// Инициализация Firebase
+if (typeof firebase === 'undefined') {
+    console.error("❌ КРИТИЧЕСКАЯ ОШИБКА: Firebase SDK не загружен!");
+    console.log("   Проверь в teacher.html строки:");
+    console.log('   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>');
+    console.log('   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js"></script>');
+} else {
+    console.log("✅ Firebase SDK загружен");
+}
+
+// ===== ИНИЦИАЛИЗАЦИЯ FIREBASE =====
 try {
     if (typeof firebase !== 'undefined') {
-        console.log("✅ Firebase библиотека загружена");
-        
-        if (!firebase.apps.length) {
+        // Проверяем, есть ли уже инициализированное приложение
+        if (firebase.apps.length === 0) {
+            console.log("📦 Инициализация нового Firebase приложения...");
             firebase.initializeApp(firebaseConfig);
             console.log("✅ Firebase приложение инициализировано");
-        }
-        
-        // ✅ СОХРАНЯЕМ ССЫЛКУ НА DATABASE В ГЛОБАЛЬНУЮ ПЕРЕМЕННУЮ
-        window.db = firebase.database();
-        console.log("✅ Firebase database доступна по адресу:", window.db);
-        
-        // Проверяем, что db работает
-        if (window.db) {
-            console.log("✅ db успешно создана");
         } else {
-            console.error("❌ db не создалась");
+            console.log("📦 Firebase уже инициализирован, используем существующее приложение");
         }
-    } else {
-        console.error("❌ Firebase не загружен! Проверь подключение в HTML");
-        console.log("   Убедись, что в teacher.html есть строки:");
-        console.log('   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>');
-        console.log('   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js"></script>');
+        
+        // ПОЛУЧАЕМ ССЫЛКУ НА DATABASE
+        console.log("📦 Получаем ссылку на Realtime Database...");
+        const database = firebase.database();
+        
+        // СОХРАНЯЕМ В ГЛОБАЛЬНУЮ ПЕРЕМЕННУЮ
+        window.db = database;
+        
+        console.log("✅ window.db установлена:", window.db ? "✅ ЕСТЬ" : "❌ НЕТ");
+        
+        // ПРОВЕРЯЕМ, ЧТО db РАБОТАЕТ
+        if (window.db) {
+            console.log("✅ Firebase полностью готов к работе");
+            // Тестовая операция
+            window.db.ref('.info/connected').once('value')
+                .then(() => console.log("✅ Связь с Firebase установлена"))
+                .catch(e => console.log("⚠️ Тестовая проверка:", e));
+        }
     }
 } catch (error) {
-    console.error("❌ Ошибка Firebase:", error);
+    console.error("❌ ОШИБКА при инициализации Firebase:", error);
 }
 
 // ============================================
-// 📚 30 ВОПРОСОВ ПО АНГЛИЙСКОМУ: FEARS AND PHOBIAS
+// 📚 30 ВОПРОСОВ ПО АНГЛИЙСКОМУ
 // ============================================
-
-// Функция для перемешивания вариантов ответов
-function shuffleOptions(question) {
-    const options = [...question.options];
-    const correctAnswer = options[question.correct];
-    
-    // Перемешиваем массив
-    for (let i = options.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [options[i], options[j]] = [options[j], options[i]];
-    }
-    
-    // Находим новый индекс правильного ответа
-    const newCorrectIndex = options.indexOf(correctAnswer);
-    
-    return {
-        ...question,
-        options: options,
-        correct: newCorrectIndex
-    };
-}
 
 window.QUIZ_DATA = {
     id: "english_fears_phobias",
@@ -81,15 +74,8 @@ window.QUIZ_DATA = {
     subject: "English",
     author: "English Teacher",
     version: "2024.1",
-    
-    // Получить вопрос с перемешанными вариантами
-    getShuffledQuestion(index) {
-        if (index < 0 || index >= this.questions.length) return null;
-        return shuffleOptions({...this.questions[index]});
-    },
-    
     questions: [
-        // ===== 🟢 ЛЁГКИЕ ВОПРОСЫ (1-10) - Vocabulary =====
+        // === ЛЁГКИЕ (1-10) ===
         {
             id: 1,
             type: "easy",
@@ -191,7 +177,7 @@ window.QUIZ_DATA = {
             difficulty: "easy"
         },
         
-        // ===== 🟡 СРЕДНИЕ ВОПРОСЫ (11-20) - Fill in the blank =====
+        // === СРЕДНИЕ (11-20) ===
         {
             id: 11,
             type: "medium",
@@ -293,7 +279,7 @@ window.QUIZ_DATA = {
             difficulty: "medium"
         },
         
-        // ===== 🔴 СЛОЖНЫЕ ВОПРОСЫ (21-30) - Preferences =====
+        // === СЛОЖНЫЕ (21-30) ===
         {
             id: 21,
             type: "hard",
@@ -397,42 +383,10 @@ window.QUIZ_DATA = {
     ]
 };
 
-console.log(`✅ Загружено ${QUIZ_DATA.questions.length} вопросов по английскому (Fears and Phobias)`);
+console.log(`✅ Загружено ${window.QUIZ_DATA.questions.length} вопросов`);
 
-// ============================================
-// 🤖 TELEGRAM BOT CONFIG
-// ============================================
-
-window.TELEGRAM_CONFIG = {
-    botToken: "8110893337:AAEXbYtRyyrt_k1oAwjsOhOBUsdPnGCH_oM",
-    
-    sendModerationMessage(playerName, action, questionData) {
-        console.log(`🤓 Модерация: ${playerName} - ${action}`, questionData);
-    }
-};
-
-// ============================================
-// 🛠️ СИСТЕМА МОДЕРАТОРОВ
-// ============================================
-
-window.moderatorSystem = {
-    MODERATOR_PASSWORD: "English2024",
-    
-    isModerator() {
-        return localStorage.getItem('isModerator') === 'true';
-    },
-    
-    setModerator(status) {
-        localStorage.setItem('isModerator', status);
-    },
-    
-    showPasswordModal() {
-        alert("Moderator mode password: " + this.MODERATOR_PASSWORD);
-    }
-};
-
-// ✅ ФИНАЛЬНАЯ ПРОВЕРКА
-console.log("🔍 Финальная проверка в firebase-config.js:");
-console.log("   window.db =", window.db);
-console.log("   window.QUIZ_DATA =", window.QUIZ_DATA ? "✅ есть" : "❌ нет");
-console.log("✅ firebase-config.js полностью загружен");
+// ===== ФИНАЛЬНАЯ ПРОВЕРКА =====
+console.log("🔍 ФИНАЛЬНАЯ ПРОВЕРКА firebase-config.js:");
+console.log("   - window.db =", window.db);
+console.log("   - window.QUIZ_DATA =", window.QUIZ_DATA ? "✅ ЕСТЬ" : "❌ НЕТ");
+console.log("🔥 firebase-config.js: ЗАВЕРШЕНО");
