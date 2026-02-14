@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ENGLISH KAHOOT - Fears and Phobias Quiz</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        /* GLASSMORPHISM STYLES - ENGLISH VERSION */
+        :root {
+            --primary-glow: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --secondary-glow: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --accent-glow: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(79, 172, 254, 0.25) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(240, 147, 251, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(67, 233, 123, 0.15) 0%, transparent 50%);
+            z-index: -1;
+            pointer-events: none;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* АНИМИРОВАННАЯ ШАПКА */
+        .home-header {
+            text-align: center;
+            padding: 80px 30px;
+            margin-bottom: 60px;
+            position: relative;
+        }
+        
+        .logo {
+            font-size: 120px;
+            margin-bottom: 30px;
+            display: inline-block;
+            animation: float 6s ease-in-out infinite;
+            background: var(--primary-glow);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 10px 20px rgba(79, 172, 254, 0.3));
+        }
+        
+        @keyframes float {
+            0%, 100% { 
+                transform: translateY(0) rotate(0deg); 
+                filter: drop-shadow(0 10px 20px rgba(79, 172, 254, 0.3));
+            }
+            50% { 
+                transform: translateY(-20px) rotate(5deg); 
+                filter: drop-shadow(0 20px 40px rgba(79, 172, 254, 0.5));
+            }
+        }
+        
+        h1 {
+            font-size: 4.5rem;
+            font-weight: 900;
+            background: var(--primary-glow);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+            letter-spacing: -1px;
+            text-shadow: 0 10px 30px rgba(79, 172, 254, 0.2);
+        }
+        
+        .subtitle {
+            font-size: 1.4rem;
+            color: rgba(255, 255, 255, 0.9);
+            max-width: 800px;
+            margin: 0 auto 40px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            padding: 20px 30px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            line-height: 1.6;
+        }
+        
+        /* СТАТИСТИКА В СТИЛЕ GLASS */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin: 70px 0;
+        }
+        
+        .stat-item {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px 30px;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--primary-glow);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: -1;
+        }
+        
+        .stat-item:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border-color: rgba(79, 172, 254, 0.5);
+        }
+        
+        .stat-item:hover::before {
+            opacity: 0.1;
+        }
+        
+        .stat-icon {
+            font-size: 60px;
+            margin-bottom: 25px;
+            display: inline-block;
+            background: var(--primary-glow);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-item h4 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: white;
+            font-weight: 700;
+        }
+        
+        .stat-item p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+        }
+        
+        /* ВЫБОР РОЛИ - GLASS CARDS */
+        .role-selection {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 40px;
+            margin: 80px 0;
+        }
+        
+        .role-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            padding: 60px 40px;
+            text-align: center;
+            border: 1px solid var(--glass-border);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--glass-shadow);
+        }
+        
+        .role-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            right: -50%;
+            bottom: -50%;
+            background: conic-gradient(
+                from 0deg,
+                transparent,
+                rgba(255, 255, 255, 0.1),
+                transparent 30%
+            );
+            animation: rotate 6s linear infinite;
+            z-index: -1;
+        }
+        
+        @keyframes rotate {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .teacher-card {
+            border-top: 4px solid #4facfe;
+            border-right: 4px solid #00f2fe;
+        }
+        
+        .student-card {
+            border-top: 4px solid #43e97b;
+            border-right: 4px solid #38f9d7;
+        }
+        
+        .role-card:hover {
+            transform: translateY(-15px) scale(1.02);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+        }
+        
+        .role-icon {
+            font-size: 90px;
+            margin-bottom: 35px;
+            display: inline-block;
+            animation: pulse 3s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .teacher-card .role-icon {
+            background: var(--primary-glow);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .student-card .role-icon {
+            background: var(--accent-glow);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .role-card h3 {
+            font-size: 2.2rem;
+            margin-bottom: 25px;
+            color: white;
+            font-weight: 800;
+        }
+        
+        .role-card p {
+            margin-bottom: 35px;
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        
+        /* КНОПКИ GLASS */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            padding: 22px 45px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            color: white;
+            border: 2px solid transparent;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .glass-btn-primary {
+            background: rgba(79, 172, 254, 0.2);
+            border: 2px solid rgba(79, 172, 254, 0.5);
+        }
+        
+        .glass-btn-success {
+            background: rgba(67, 233, 123, 0.2);
+            border: 2px solid rgba(67, 233, 123, 0.5);
+        }
+        
+        .btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        /* ИНСТРУКЦИЯ */
+        .steps-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            padding: 60px 50px;
+            margin: 80px 0;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .steps-container::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 300px;
+            height: 300px;
+            background: var(--secondary-glow);
+            border-radius: 50%;
+            opacity: 0.1;
+            filter: blur(60px);
+        }
+        
+        .steps-container h2 {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+            font-size: 2.5rem;
+            font-weight: 800;
+        }
+        
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 35px;
+            margin-top: 50px;
+        }
+        
+        .step {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            padding: 35px;
+            border-left: 6px solid #4facfe;
+            transition: all 0.4s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .step:hover {
+            transform: translateY(-10px) translateX(10px);
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            background: var(--primary-glow);
+            color: white;
+            border-radius: 50%;
+            font-weight: 900;
+            font-size: 1.8rem;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+        
+        .step p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        
+        .step strong {
+            color: white;
+        }
+        
+        /* ПОДВАЛ GLASS */
+        .home-footer {
+            text-align: center;
+            padding: 60px 20px;
+            margin-top: 100px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.7);
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(20px);
+            border-radius: 40px 40px 0 0;
+        }
+        
+        .home-footer p {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+        
+        .tech-stack {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .tech-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px 24px;
+            border-radius: 20px;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .tech-item i {
+            color: #4facfe;
+        }
+        
+        /* МОДЕРАТОРСКАЯ ССЫЛКА */
+        .moderator-link {
+            color: #f093fb;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            background: rgba(240, 147, 251, 0.1);
+            margin-top: 20px;
+            border: 1px solid rgba(240, 147, 251, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .moderator-link:hover {
+            background: rgba(240, 147, 251, 0.2);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(240, 147, 251, 0.2);
+        }
+        
+        /* АДАПТИВНОСТЬ */
+        @media (max-width: 1024px) {
+            h1 {
+                font-size: 3.5rem;
+            }
+            
+            .role-selection {
+                grid-template-columns: 1fr;
+            }
+            
+            .steps {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.8rem;
+            }
+            
+            .logo {
+                font-size: 80px;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+            
+            .steps {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn {
+                padding: 20px 30px;
+                font-size: 1.1rem;
+            }
+            
+            .role-card {
+                padding: 40px 25px;
+            }
+            
+            .home-header {
+                padding: 50px 20px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .tech-stack {
+                flex-direction: column;
+                align-items: center;
+                gap: 15px;
+            }
+            
+            .subtitle {
+                font-size: 1.1rem;
+                padding: 15px 20px;
+            }
+        }
+    </style>
+</head>
+<body class="home-page">
+    <div class="container">
+        <!-- ШАПКА -->
+        <header class="home-header">
+            <div class="logo">🇬🇧</div>
+            <h1>ENGLISH KAHOOT</h1>
+            <p class="subtitle">Interactive English quiz about <strong>Fears and Phobias</strong>.<br>30 questions with different difficulty levels and real-time multiplayer.</p>
+        </header>
+
+        <!-- СТАТИСТИКА -->
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-icon">📚</div>
+                <h4>30 Questions</h4>
+                <p>Easy, medium and hard levels</p>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon">✨</div>
+                <h4>Glass Design</h4>
+                <p>Modern glassmorphism interface</p>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon">📱</div>
+                <h4>Mobile Friendly</h4>
+                <p>Works on all devices</p>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon">👥</div>
+                <h4>Multiplayer</h4>
+                <p>Unlimited players</p>
+            </div>
+        </div>
+
+        <!-- ВЫБОР РОЛИ -->
+        <div class="role-selection">
+            <div class="role-card teacher-card">
+                <div class="role-icon">👨‍🏫</div>
+                <h3>TEACHER</h3>
+                <p>Start the quiz, show questions on screen, manage the game in real-time. See all students' answers and statistics.</p>
+                <a href="teacher.html" class="btn glass-btn-primary">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                    TEACHER PANEL
+                </a>
+            </div>
+
+            <div class="role-card student-card">
+                <div class="role-icon">🧑‍🎓</div>
+                <h3>STUDENT</h3>
+                <p>Join with your phone or computer, answer questions, compete with classmates, track your progress in real-time.</p>
+                <a href="student.html" class="btn glass-btn-success">
+                    <i class="fas fa-mobile-alt"></i>
+                    JOIN GAME
+                </a>
+            </div>
+        </div>
+
+        <!-- КАК ЭТО РАБОТАЕТ -->
+        <div class="steps-container">
+            <h2><i class="fas fa-play-circle" style="margin-right: 15px;"></i> How It Works</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <p><strong>Teacher</strong> creates a game on the teacher panel and gets a unique 8-digit code</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <p><strong>Students</strong> join using the game code from their phones or computers</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <p><strong>Questions appear</strong> on the teacher's screen in a beautiful presentation mode</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <p><strong>Real-time statistics</strong> show results of all participants instantly</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ПОДВАЛ -->
+        <footer class="home-footer">
+            <p>English Quiz: Fears and Phobias | Grade 9</p>
+            <div class="tech-stack">
+                <span class="tech-item">
+                    <i class="fas fa-fire"></i> Firebase Realtime
+                </span>
+                <span class="tech-item">
+                    <i class="fab fa-html5"></i> HTML5
+                </span>
+                <span class="tech-item">
+                    <i class="fab fa-js"></i> JavaScript
+                </span>
+                <span class="tech-item">
+                    <i class="fas fa-paint-brush"></i> Glassmorphism
+                </span>
+                <span class="tech-item">
+                    <i class="fab fa-telegram"></i> Telegram Bot
+                </span>
+            </div>
+            <p style="margin-top: 30px;">
+                © 2024 English Kahoot | 
+                <span id="moderatorSignature" class="moderator-link">
+                    <i class="fas fa-user-shield"></i> Moderator Panel
+                </span>
+            </p>
+        </footer>
+    </div>
+
+    <!-- Firebase config -->
+    <script src="firebase-config.js"></script>
+
+    <script>
+        // ИНИЦИАЛИЗАЦИЯ
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("🚀 English Kahoot loaded!");
+            
+            // Обработчик для кнопки модератора
+            document.getElementById('moderatorSignature').addEventListener('click', function() {
+                if (window.moderatorSystem && typeof window.moderatorSystem.showPasswordModal === 'function') {
+                    moderatorSystem.showPasswordModal();
+                } else {
+                    alert("Moderator system loading...");
+                }
+            });
+            
+            // Парящая анимация логотипа
+            const logo = document.querySelector('.logo');
+            if (logo) {
+                setInterval(() => {
+                    logo.style.animation = 'none';
+                    setTimeout(() => {
+                        logo.style.animation = 'float 6s ease-in-out infinite';
+                    }, 10);
+                }, 15000);
+            }
+            
+            // Анимация появления элементов
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+            
+            // Наблюдаем за элементами
+            document.querySelectorAll('.stat-item, .role-card, .step').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(30px)';
+                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(el);
+            });
+        });
+    </script>
+</body>
+</html>
