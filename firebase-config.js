@@ -1,8 +1,10 @@
 // ============================================
-// FIREBASE CONFIG - С КНОПКАМИ ДЛЯ МОДЕРАЦИИ
+// FIREBASE CONFIG - ENGLISH: FEARS AND PHOBIAS
 // ============================================
 
-// 🔥 НОВАЯ КОНФИГУРАЦИЯ FIREBASE
+console.log("🔥 firebase-config.js загружается...");
+
+// 🔥 НОВАЯ КОНФИГУРАЦИЯ FIREBASE (твоя)
 const firebaseConfig = {
   apiKey: "AIzaSyBC4rcVKEMj88Dm2snG5XXxAuZqeNPMc3c",
   authDomain: "engk-5a74a.firebaseapp.com",
@@ -16,135 +18,44 @@ const firebaseConfig = {
 
 // Инициализация Firebase
 try {
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
+    if (typeof firebase !== 'undefined') {
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+            console.log("✅ Firebase инициализирован");
+        }
+        window.db = firebase.database();
+        console.log("✅ Firebase database доступна");
+    } else {
+        console.error("❌ Firebase не загружен! Проверь подключение в HTML");
     }
-    window.db = firebase.database();
-    console.log("✅ Firebase инициализирован");
 } catch (error) {
     console.error("❌ Ошибка Firebase:", error);
 }
 
 // ============================================
-// 🤖 TELEGRAM BOT С КНОПКАМИ
+// 📚 30 ВОПРОСОВ ПО АНГЛИЙСКОМУ: FEARS AND PHOBIAS
 // ============================================
 
-window.TELEGRAM_CONFIG = {
-    botToken: "8110893337:AAEXbYtRyyrt_k1oAwjsOhOBUsdPnGCH_oM",
+// Функция для перемешивания вариантов ответов
+function shuffleOptions(question) {
+    const options = [...question.options];
+    const correctAnswer = options[question.correct];
     
-    // Отправка сообщения с кнопками
-    sendModerationMessage(playerName, action, questionData) {
-        const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
-        
-        let message = '';
-        let keyboard = {};
-        
-        if (action === 'translation') {
-            message = `<b>🤓 ЗАПРОС ПЕРЕВОДА</b>\n`;
-            message += `👤 Игрок: ${playerName}\n`;
-            message += `🔢 Вопрос: ${questionData.id}\n`;
-            message += `📝 Текст: ${questionData.text}\n`;
-            message += `⏰ Время: ${new Date().toLocaleString('ru-RU')}\n\n`;
-            message += `❓ Разрешить перевод?`;
-            
-            keyboard = {
-                inline_keyboard: [
-                    [
-                        { text: "✅ РАЗРЕШИТЬ", callback_data: `translate_allow_${playerName}_${questionData.id}` },
-                        { text: "❌ ОТКАЗАТЬ", callback_data: `translate_deny_${playerName}_${questionData.id}` }
-                    ]
-                ]
-            };
-        }
-        
-        if (action === 'wrong_answer') {
-            message = `<b>🤓 ОШИБКА ЧАЙНИКА</b>\n`;
-            message += `👤 Игрок: ${playerName}\n`;
-            message += `🔢 Вопрос: ${questionData.id}\n`;
-            message += `📝 Текст: ${questionData.text}\n`;
-            message += `❌ Выбрал: ${questionData.selectedOption}\n`;
-            message += `✅ Правильно: ${questionData.correctOption}\n`;
-            message += `⏰ Время: ${new Date().toLocaleString('ru-RU')}\n\n`;
-            message += `🎮 Засчитать ответ?`;
-            
-            keyboard = {
-                inline_keyboard: [
-                    [
-                        { text: "✅ ЗАСЧИТАТЬ", callback_data: `accept_${playerName}_${questionData.id}` },
-                        { text: "❌ НЕ ЗАСЧИТЫВАТЬ", callback_data: `reject_${playerName}_${questionData.id}` }
-                    ]
-                ]
-            };
-        }
-        
-        fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                chat_id: "1512777396", // Твой chat ID
-                text: message,
-                parse_mode: 'HTML',
-                reply_markup: keyboard
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.ok) {
-                console.log("✅ Сообщение с кнопками отправлено");
-            }
-        })
-        .catch(error => {
-            console.error("❌ Ошибка:", error);
-        });
-    },
-    
-    // Обработка нажатий на кнопки (нужно будет настроить webhook)
-    handleCallback(callbackData) {
-        const [action, result, playerName, questionId] = callbackData.split('_');
-        
-        if (action === 'translate') {
-            if (result === 'allow') {
-                // Разрешить перевод - показать перевод
-                this.sendToPlayer(playerName, "🌐 Перевод разрешён модератором!");
-            } else {
-                // Отказать в переводе
-                this.sendToPlayer(playerName, "❌ Модератор отказал в переводе. Пробуй сам!");
-            }
-        }
-        
-        if (action === 'accept' || action === 'reject') {
-            const accept = action === 'accept';
-            // Засчитать или не засчитать ответ
-            this.updatePlayerScore(playerName, questionId, accept);
-            
-            const message = accept ? "✅ Модератор засчитал ответ!" : "❌ Модератор не засчитал ответ";
-            this.sendToPlayer(playerName, message);
-        }
-    },
-    
-    // Отправить сообщение игроку (через Firebase или уведомление)
-    sendToPlayer(playerName, message) {
-        // Сохраняем в Firebase, а student.html будет слушать
-        const notificationRef = db.ref(`notifications/${playerName}`).push();
-        notificationRef.set({
-            message: message,
-            timestamp: Date.now(),
-            read: false
-        });
-    },
-    
-    // Обновить счёт игрока
-    updatePlayerScore(playerName, questionId, accept) {
-        // Найти текущую игру и игрока
-        // Если accept = true, добавить очки
+    // Перемешиваем массив
+    for (let i = options.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [options[i], options[j]] = [options[j], options[i]];
     }
-};
-
-// ============================================
-// 📚 30 ВОПРОСОВ (те же, что я скинул ранее)
-// ============================================
+    
+    // Находим новый индекс правильного ответа
+    const newCorrectIndex = options.indexOf(correctAnswer);
+    
+    return {
+        ...question,
+        options: options,
+        correct: newCorrectIndex
+    };
+}
 
 window.QUIZ_DATA = {
     id: "english_fears_phobias",
@@ -154,27 +65,14 @@ window.QUIZ_DATA = {
     author: "English Teacher",
     version: "2024.1",
     
-    // Функция для перемешивания вариантов
+    // Получить вопрос с перемешанными вариантами
     getShuffledQuestion(index) {
         if (index < 0 || index >= this.questions.length) return null;
-        const question = {...this.questions[index]};
-        const options = [...question.options];
-        const correctAnswer = options[question.correct];
-        
-        // Перемешиваем
-        for (let i = options.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [options[i], options[j]] = [options[j], options[i]];
-        }
-        
-        question.options = options;
-        question.correct = options.indexOf(correctAnswer);
-        
-        return question;
+        return shuffleOptions({...this.questions[index]});
     },
     
     questions: [
-        // 🟢 ЛЁГКИЕ (1-10)
+        // ===== 🟢 ЛЁГКИЕ ВОПРОСЫ (1-10) - Vocabulary =====
         {
             id: 1,
             type: "easy",
@@ -276,7 +174,7 @@ window.QUIZ_DATA = {
             difficulty: "easy"
         },
         
-        // 🟡 СРЕДНИЕ (11-20)
+        // ===== 🟡 СРЕДНИЕ ВОПРОСЫ (11-20) - Fill in the blank =====
         {
             id: 11,
             type: "medium",
@@ -378,7 +276,7 @@ window.QUIZ_DATA = {
             difficulty: "medium"
         },
         
-        // 🔴 СЛОЖНЫЕ - PREFERENCES (21-30)
+        // ===== 🔴 СЛОЖНЫЕ ВОПРОСЫ (21-30) - Preferences =====
         {
             id: 21,
             type: "hard",
@@ -482,8 +380,27 @@ window.QUIZ_DATA = {
     ]
 };
 
-console.log(`✅ Загружено ${QUIZ_DATA.questions.length} вопросов по английскому`);
-console.log(`🤖 Telegram-бот с кнопками готов!`);
+console.log(`✅ Загружено ${QUIZ_DATA.questions.length} вопросов по английскому (Fears and Phobias)`);
+console.log(`🤓 Режим для чайников активирован!`);
+
+// ============================================
+// 🤖 TELEGRAM BOT CONFIG
+// ============================================
+
+window.TELEGRAM_CONFIG = {
+    botToken: "8110893337:AAEXbYtRyyrt_k1oAwjsOhOBUsdPnGCH_oM",
+    
+    // Функция отправки статистики в Telegram
+    sendToTelegram(message) {
+        console.log("📤 Отправка в Telegram:", message);
+        // Пока просто логируем, потом добавим реальную отправку
+    },
+    
+    sendModerationMessage(playerName, action, questionData) {
+        console.log(`🤓 Модерация: ${playerName} - ${action}`, questionData);
+        this.sendToTelegram(`${playerName} запросил ${action}`);
+    }
+};
 
 // ============================================
 // 🛠️ СИСТЕМА МОДЕРАТОРОВ
@@ -501,98 +418,8 @@ window.moderatorSystem = {
     },
     
     showPasswordModal() {
-        const modalHTML = `
-            <div id="moderatorModal" style="
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0,0,0,0.7);
-                backdrop-filter: blur(10px);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 10000;
-                padding: 20px;
-            ">
-                <div style="
-                    background: rgba(255, 255, 255, 0.1);
-                    backdrop-filter: blur(20px);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    padding: 30px;
-                    border-radius: 24px;
-                    max-width: 400px;
-                    width: 100%;
-                ">
-                    <h3 style="color: #fff; text-align: center; margin-bottom: 20px;">
-                        🔧 Режим модератора
-                    </h3>
-                    <input type="password" 
-                           id="moderatorPassword" 
-                           placeholder="Пароль"
-                           style="
-                                width: 100%;
-                                padding: 15px;
-                                background: rgba(255,255,255,0.1);
-                                border: 1px solid rgba(255,255,255,0.3);
-                                border-radius: 12px;
-                                color: white;
-                                font-size: 16px;
-                                margin-bottom: 15px;
-                           ">
-                    <div style="display: flex; gap: 10px;">
-                        <button onclick="moderatorSystem.checkPassword()" 
-                                style="
-                                    flex: 1;
-                                    padding: 15px;
-                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                    color: white;
-                                    border: none;
-                                    border-radius: 12px;
-                                    cursor: pointer;
-                                ">
-                            Войти
-                        </button>
-                        <button onclick="moderatorSystem.hideModal()"
-                                style="
-                                    padding: 15px 25px;
-                                    background: rgba(255, 65, 108, 0.2);
-                                    color: white;
-                                    border: 1px solid rgba(255, 65, 108, 0.5);
-                                    border-radius: 12px;
-                                    cursor: pointer;
-                                ">
-                            Отмена
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-    },
-    
-    checkPassword() {
-        const input = document.getElementById('moderatorPassword');
-        if (!input) return;
-        
-        if (input.value === this.MODERATOR_PASSWORD) {
-            this.setModerator(true);
-            this.hideModal();
-            this.showModeratorControls();
-            alert('✅ Вы вошли как модератор!');
-        } else {
-            alert('❌ Неверный пароль!');
-        }
-    },
-    
-    hideModal() {
-        const modal = document.getElementById('moderatorModal');
-        if (modal) modal.remove();
-    },
-    
-    showModeratorControls() {
-        // Показать элементы управления модератора
+        alert("Moderator mode: " + this.MODERATOR_PASSWORD);
     }
 };
+
+console.log("✅ firebase-config.js полностью загружен");
