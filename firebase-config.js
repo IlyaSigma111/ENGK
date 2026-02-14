@@ -4,7 +4,7 @@
 
 console.log("🔥 firebase-config.js загружается...");
 
-// 🔥 НОВАЯ КОНФИГУРАЦИЯ FIREBASE (твоя)
+// 🔥 НОВАЯ КОНФИГУРАЦИЯ FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyBC4rcVKEMj88Dm2snG5XXxAuZqeNPMc3c",
   authDomain: "engk-5a74a.firebaseapp.com",
@@ -16,15 +16,29 @@ const firebaseConfig = {
   measurementId: "G-CJWPXGL2JQ"
 };
 
+// ✅ СОЗДАЁМ ГЛОБАЛЬНУЮ ПЕРЕМЕННУЮ ДЛЯ БД
+window.db = null;
+
 // Инициализация Firebase
 try {
     if (typeof firebase !== 'undefined') {
+        console.log("✅ Firebase библиотека загружена");
+        
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
-            console.log("✅ Firebase инициализирован");
+            console.log("✅ Firebase приложение инициализировано");
         }
+        
+        // ✅ СОХРАНЯЕМ ССЫЛКУ НА DATABASE В ГЛОБАЛЬНУЮ ПЕРЕМЕННУЮ
         window.db = firebase.database();
         console.log("✅ Firebase database доступна");
+        
+        // Проверяем, что db работает
+        if (window.db) {
+            console.log("✅ db успешно создана");
+        } else {
+            console.error("❌ db не создалась");
+        }
     } else {
         console.error("❌ Firebase не загружен! Проверь подключение в HTML");
     }
@@ -381,7 +395,6 @@ window.QUIZ_DATA = {
 };
 
 console.log(`✅ Загружено ${QUIZ_DATA.questions.length} вопросов по английскому (Fears and Phobias)`);
-console.log(`🤓 Режим для чайников активирован!`);
 
 // ============================================
 // 🤖 TELEGRAM BOT CONFIG
@@ -390,15 +403,8 @@ console.log(`🤓 Режим для чайников активирован!`);
 window.TELEGRAM_CONFIG = {
     botToken: "8110893337:AAEXbYtRyyrt_k1oAwjsOhOBUsdPnGCH_oM",
     
-    // Функция отправки статистики в Telegram
-    sendToTelegram(message) {
-        console.log("📤 Отправка в Telegram:", message);
-        // Пока просто логируем, потом добавим реальную отправку
-    },
-    
     sendModerationMessage(playerName, action, questionData) {
         console.log(`🤓 Модерация: ${playerName} - ${action}`, questionData);
-        this.sendToTelegram(`${playerName} запросил ${action}`);
     }
 };
 
@@ -418,8 +424,12 @@ window.moderatorSystem = {
     },
     
     showPasswordModal() {
-        alert("Moderator mode: " + this.MODERATOR_PASSWORD);
+        alert("Moderator mode password: " + this.MODERATOR_PASSWORD);
     }
 };
 
+// ✅ ФИНАЛЬНАЯ ПРОВЕРКА
+console.log("🔍 Финальная проверка в firebase-config.js:");
+console.log("   window.db =", window.db);
+console.log("   window.QUIZ_DATA =", window.QUIZ_DATA ? "✅ есть" : "❌ нет");
 console.log("✅ firebase-config.js полностью загружен");
