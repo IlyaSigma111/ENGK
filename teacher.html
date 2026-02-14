@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Panel - English Quiz: Fears and Phobias</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <!-- ✅ ПРАВИЛЬНЫЕ ССЫЛКИ НА FIREBASE (более стабильные) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js"></script>
+    
     <style>
         /* =========================================
            ПОЛНЫЕ GLASSMORPHISM STYLES ДЛЯ УЧИТЕЛЯ
@@ -849,8 +852,22 @@
         </div>
     </div>
 
-    <!-- Firebase config -->
+    <!-- ✅ ПОДКЛЮЧАЕМ СНАЧАЛА FIREBASE, ПОТОМ ВСЁ ОСТАЛЬНОЕ -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js"></script>
     <script src="firebase-config.js"></script>
-    <script src="teacher-simple.js"></script>
+    <script src="teacher.js"></script>
+    
+    <script>
+        // Проверка загрузки Firebase
+        console.log("🔍 Проверка Firebase в teacher.html:");
+        console.log("   firebase доступен:", typeof firebase !== 'undefined' ? '✅' : '❌');
+        console.log("   firebase.database:", typeof firebase?.database === 'function' ? '✅' : '❌');
+        
+        // Если Firebase не загрузился, показываем ошибку
+        if (typeof firebase === 'undefined') {
+            alert("❌ Ошибка загрузки Firebase! Проверьте подключение к интернету.");
+        }
+    </script>
 </body>
 </html>
