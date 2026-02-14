@@ -36,6 +36,17 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log("✅ db получена из window.db");
     } else {
         console.error("❌ window.db не определена! Firebase не инициализирован");
+        console.log("   Ждём 500ms и пробуем снова...");
+        
+        // Пробуем ещё раз через полсекунды
+        setTimeout(function() {
+            if (window.db) {
+                db = window.db;
+                console.log("✅ db получена после ожидания");
+            } else {
+                console.error("❌ window.db всё ещё undefined!");
+            }
+        }, 500);
     }
     
     console.log("📊 Проверка Firebase:", db ? '✅ Есть' : '❌ Нет');
@@ -124,9 +135,16 @@ function startNewGame() {
     // ПРОВЕРКА 1: Есть ли db?
     if (!db) {
         console.error("❌ ОШИБКА: db не определена!");
-        console.log("   Проверь: firebase.database() не сработал");
-        alert("❌ Firebase не подключен! Открой консоль (F12) чтобы увидеть ошибки");
-        return;
+        console.log("   Пробуем взять из window.db...");
+        
+        if (window.db) {
+            db = window.db;
+            console.log("✅ db взята из window.db");
+        } else {
+            console.error("❌ window.db тоже не определена!");
+            alert("❌ Firebase не подключен! Открой консоль (F12) чтобы увидеть ошибки");
+            return;
+        }
     }
     console.log("✅ db определена");
     
@@ -200,6 +218,7 @@ function startNewGame() {
     
     // Сохраняем в Firebase
     console.log("📤 Отправка в Firebase...");
+    console.log("   Путь:", 'games/' + currentGameId);
     
     db.ref('games/' + currentGameId).set(gameData)
         .then(() => {
