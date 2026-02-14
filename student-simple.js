@@ -1,5 +1,5 @@
 // ============================================
-// student-simple.js - СПЕЦИАЛЬНО ДЛЯ АЙФОНА
+// student-simple.js - С РАБОЧИМ TELEGRAM БОТОМ
 // ============================================
 
 console.log("🔥 student-simple.js загружается...");
@@ -11,15 +11,19 @@ let hasAnswered = false;
 let db = null;
 let noobRequests = 0;
 
+// Конфиг Telegram
+const TELEGRAM_BOT_TOKEN = "8110893337:AAEXbYtRyyrt_k1oAwjsOhOBUsdPnGCH_oM";
+const TELEGRAM_CHAT_ID = "1512777396";
+
 // Элементы DOM
 let joinScreen, waitingScreen, questionScreen, resultScreen;
-let joinButton, errorContainer, notificationContainer;
+let joinButton, errorContainer, notificationContainer, noobButton;
 let displayName, displayCode, displayScore, roomPlayers;
 let currentQSpan, questionText, optionsContainer, answerStatus, resultContent;
 
-// ИНИЦИАЛИЗАЦИЯ ПОСЛЕ ЗАГРУЗКИ
+// ИНИЦИАЛИЗАЦИЯ
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("🚀 Student page initializing for iPhone...");
+    console.log("🚀 Student page initializing...");
     
     // Получаем db из window
     if (window.db) {
@@ -29,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error("❌ window.db не определена!");
     }
     
-    // Получаем все элементы DOM
+    // Получаем элементы DOM
     joinScreen = document.getElementById('joinScreen');
     waitingScreen = document.getElementById('waitingScreen');
     questionScreen = document.getElementById('questionScreen');
@@ -38,6 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
     joinButton = document.getElementById('joinButton');
     errorContainer = document.getElementById('errorContainer');
     notificationContainer = document.getElementById('notificationContainer');
+    noobButton = document.getElementById('noobButton');
     
     displayName = document.getElementById('displayName');
     displayCode = document.getElementById('displayCode');
@@ -50,31 +55,22 @@ document.addEventListener('DOMContentLoaded', function() {
     answerStatus = document.getElementById('answerStatus');
     resultContent = document.getElementById('resultContent');
     
-    console.log("📊 Элементы найдены:", {
-        joinButton: !!joinButton,
-        joinScreen: !!joinScreen
-    });
-    
-    // УСТАНАВЛИВАЕМ ОБРАБОТЧИКИ СПЕЦИАЛЬНО ДЛЯ АЙФОНА
+    // Устанавливаем обработчики
     if (joinButton) {
-        // Для iPhone используем оба события
         joinButton.addEventListener('click', function(e) {
             e.preventDefault();
-            console.log("👆 click на joinButton");
             joinGame();
         });
-        
-        // Добавляем touch событие для надёжности
-        joinButton.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-            console.log("👆 touch на joinButton");
-            joinGame();
-        }, { passive: false });
-        
-        console.log("✅ Обработчики на joinButton установлены");
     }
     
-    // Обработчики для полей ввода
+    if (noobButton) {
+        noobButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            handleNoobButtonClick();
+        });
+    }
+    
+    // Обработчики полей ввода
     const playerNameInput = document.getElementById('playerName');
     const gameCodeInput = document.getElementById('gameCode');
     
@@ -98,22 +94,153 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Проверяем Firebase через 1 секунду
-    setTimeout(checkFirebase, 1000);
-    
     console.log("✅ Инициализация завершена");
 });
 
-// ПРОВЕРКА FIREBASE
-function checkFirebase() {
-    console.log("🔍 Проверка Firebase:");
-    console.log("   - window.db =", window.db ? "✅" : "❌");
-    console.log("   - firebase global =", typeof firebase !== 'undefined' ? "✅" : "❌");
+// ============================================
+// 🤓 ОБРАБОТКА КНОПКИ ЧАЙНИКА
+// ============================================
+
+function handleNoobButtonClick() {
+    console.log("🤓 handleNoobButtonClick");
     
-    if (!db && window.db) {
-        db = window.db;
-        console.log("✅ db восстановлена");
+    if (!currentGameId || !playerName) {
+        showNotification("❌ Join a game first!", "error");
+        return;
     }
+    
+    if (!currentQuestion) {
+        showNotification("❌ No active question!", "error");
+        return;
+    }
+    
+    requestTranslation();
+}
+
+function requestTranslation() {
+    console.log("🤓 requestTranslation");
+    
+    noobRequests++;
+    
+    // Отправляем в Firebase
+    if (db && currentGameId) {
+        const requestData = {
+            playerName: playerName,
+            type: 'translation',
+            questionData: {
+                id: currentQuestion.id,
+                text: currentQuestion.text
+            },
+            timestamp: Date.now(),
+            gameId: currentGameId
+        };
+        
+        db.ref(`noob_requests/${currentGameId}`).push(requestData)
+            .then(() => {
+                console.log("✅ Запрос в Firebase отправлен");
+                showNotification("🌐 Translation requested!", "warning");
+                
+                // Показываем перевод
+                const translatedText = simpleTranslate(currentQuestion.text);
+                showNotification(`📝 ${translatedText}`, "info");
+                
+                // Отправляем в Telegram
+                sendToTelegram('translation', {
+                    playerName: playerName,
+                    gameId: currentGameId,
+                    questionId: currentQuestion.id,
+                    questionText: currentQuestion.text
+                });
+            })
+            .catch(error => {
+                console.error("❌ Ошибка Firebase:", error);
+                showNotification("❌ Failed to send request", "error");
+            });
+    }
+}
+
+// ============================================
+// 📤 ОТПРАВКА В TELEGRAM
+// ============================================
+
+function sendToTelegram(type, data) {
+    console.log(`📤 Отправка в Telegram (${type}):`, data);
+    
+    let message = '';
+    
+    if (type === 'translation') {
+        message = `🤓 <b>ЗАПРОС ПЕРЕВОДА</b>\n`;
+        message += `👤 Игрок: ${data.playerName}\n`;
+        message += `🆔 Игра: ${data.gameId}\n`;
+        message += `🔢 Вопрос: ${data.questionId}\n`;
+        message += `📝 Текст: ${data.questionText}\n`;
+        message += `⏰ Время: ${new Date().toLocaleString('ru-RU')}`;
+    }
+    
+    if (type === 'wrong_answer') {
+        message = `❌ <b>ОШИБКА ЧАЙНИКА</b>\n`;
+        message += `👤 Игрок: ${data.playerName}\n`;
+        message += `🆔 Игра: ${data.gameId}\n`;
+        message += `🔢 Вопрос: ${data.questionId}\n`;
+        message += `📝 Текст: ${data.questionText}\n`;
+        message += `❌ Выбрал: ${data.selectedOption}\n`;
+        message += `✅ Правильно: ${data.correctOption}`;
+    }
+    
+    // СПОСОБ 1: Через JSONP (работает везде)
+    sendViaJsonP(message);
+    
+    // СПОСОБ 2: Через скрытый iframe (запасной)
+    setTimeout(() => sendViaIframe(message), 500);
+}
+
+// Способ 1: JSONP
+function sendViaJsonP(message) {
+    const callbackName = 'tg_callback_' + Date.now();
+    const script = document.createElement('script');
+    
+    // Создаём временную функцию
+    window[callbackName] = function(response) {
+        console.log("✅ JSONP ответ:", response);
+        delete window[callbackName];
+        script.remove();
+    };
+    
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage` +
+                `?chat_id=${TELEGRAM_CHAT_ID}` +
+                `&text=${encodeURIComponent(message)}` +
+                `&parse_mode=HTML` +
+                `&callback=${callbackName}`;
+    
+    script.src = url;
+    document.head.appendChild(script);
+    
+    // Таймаут на случай ошибки
+    setTimeout(() => {
+        if (window[callbackName]) {
+            console.log("⚠️ JSONP таймаут");
+            delete window[callbackName];
+            script.remove();
+        }
+    }, 5000);
+}
+
+// Способ 2: Iframe
+function sendViaIframe(message) {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage` +
+                `?chat_id=${TELEGRAM_CHAT_ID}` +
+                `&text=${encodeURIComponent(message)}` +
+                `&parse_mode=HTML`;
+    
+    iframe.src = url;
+    document.body.appendChild(iframe);
+    
+    setTimeout(() => {
+        iframe.remove();
+    }, 3000);
 }
 
 // ============================================
@@ -121,23 +248,16 @@ function checkFirebase() {
 // ============================================
 
 function joinGame() {
-    console.log("🎮 joinGame вызвана");
+    console.log("🎮 joinGame");
     
     const nameInput = document.getElementById('playerName');
     const codeInput = document.getElementById('gameCode');
     
-    if (!nameInput || !codeInput) {
-        console.error("❌ Поля ввода не найдены");
-        alert("Ошибка: поля ввода не найдены");
-        return;
-    }
+    if (!nameInput || !codeInput) return;
     
     const name = nameInput.value.trim();
     const code = codeInput.value.trim();
     
-    console.log("📝 Введено:", { name, code });
-    
-    // Валидация
     if (!name || name.length < 2) {
         showError("Enter your name (min 2 characters)");
         return;
@@ -148,13 +268,11 @@ function joinGame() {
         return;
     }
     
-    // Проверка Firebase
     if (!db) {
         if (window.db) {
             db = window.db;
-            console.log("✅ db взята из window.db");
         } else {
-            showError("Firebase not connected. Refresh page.");
+            showError("Firebase not connected");
             return;
         }
     }
@@ -162,29 +280,13 @@ function joinGame() {
     playerName = name;
     currentGameId = "game_" + code;
     
-    console.log("🎮 Подключение к игре:", currentGameId);
-    
-    // Блокируем кнопку
     if (joinButton) {
         joinButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CONNECTING...';
         joinButton.disabled = true;
-        // Для iPhone
-        joinButton.style.opacity = '0.7';
-        joinButton.style.pointerEvents = 'none';
-    }
-    
-    // Проверяем существование игры
-    if (!db || !db.ref) {
-        console.error("❌ db.ref не существует");
-        showError("Database error");
-        resetButton();
-        return;
     }
     
     db.ref(`games/${currentGameId}`).once('value')
         .then(snapshot => {
-            console.log("📊 Ответ от Firebase:", snapshot.exists() ? "игра найдена" : "игра не найдена");
-            
             if (!snapshot.exists()) {
                 throw new Error(`Game with code ${code} not found!`);
             }
@@ -195,91 +297,37 @@ function joinGame() {
                 throw new Error("This game is already finished");
             }
             
-            // Проверяем уникальность имени
             if (game.players && game.players[name]) {
                 throw new Error("Player with this name already exists!");
             }
             
-            // Регистрируем игрока
-            console.log("📝 Регистрация игрока:", name);
             return db.ref(`games/${currentGameId}/players/${name}`).set({
                 name: name,
                 joined: Date.now(),
                 score: 0,
-                noobRequests: 0,
-                device: /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? "📱 Mobile" : "💻 Computer"
+                noobRequests: 0
             });
         })
         .then(() => {
-            console.log("✅ Игрок зарегистрирован");
-            
-            // Обновляем отображение
             if (displayName) displayName.textContent = name;
             if (displayCode) displayCode.textContent = code;
             
             switchScreen('waiting');
-            
-            // Слушаем игру
             listenToGame();
             listenToNotifications();
             
-            // Восстанавливаем кнопку
-            resetButton();
+            if (joinButton) {
+                joinButton.innerHTML = '<i class="fas fa-gamepad"></i> JOIN GAME';
+                joinButton.disabled = false;
+            }
         })
         .catch(error => {
-            console.error("❌ Ошибка:", error);
             showError(error.message);
-            resetButton();
+            if (joinButton) {
+                joinButton.innerHTML = '<i class="fas fa-gamepad"></i> JOIN GAME';
+                joinButton.disabled = false;
+            }
         });
-}
-
-// СБРОС КНОПКИ
-function resetButton() {
-    if (joinButton) {
-        joinButton.innerHTML = '<i class="fas fa-gamepad"></i> JOIN GAME';
-        joinButton.disabled = false;
-        joinButton.style.opacity = '1';
-        joinButton.style.pointerEvents = 'auto';
-    }
-}
-
-// ============================================
-// 🤓 РЕЖИМ ДЛЯ ЧАЙНИКОВ
-// ============================================
-
-function requestTranslation() {
-    console.log("🤓 requestTranslation");
-    
-    if (!playerName || !currentGameId) {
-        showNotification("❌ Join the game first!", "error");
-        return;
-    }
-    
-    if (!currentQuestion) {
-        showNotification("❌ No active question!", "error");
-        return;
-    }
-    
-    noobRequests++;
-    
-    // Отправляем запрос в Firebase
-    if (db && currentGameId) {
-        db.ref(`noob_requests/${currentGameId}`).push({
-            playerName: playerName,
-            type: 'translation',
-            questionData: {
-                id: currentQuestion.id,
-                text: currentQuestion.text
-            },
-            timestamp: Date.now()
-        });
-    }
-    
-    showNotification("🌐 Translation requested!", "warning");
-    
-    // Простой перевод
-    const translatedText = simpleTranslate(currentQuestion.text);
-    showNotification(`📝 ${translatedText}`, "info");
 }
 
 function simpleTranslate(text) {
@@ -299,33 +347,23 @@ function simpleTranslate(text) {
     return translations[text] || "Translation not available";
 }
 
-// ============================================
-// 🎮 СЛУШАТЬ ИГРУ
-// ============================================
-
 function listenToGame() {
     if (!currentGameId || !db) return;
-    
-    console.log("👂 Начинаем слушать игру:", currentGameId);
     
     db.ref(`games/${currentGameId}`).on('value', snapshot => {
         const game = snapshot.val();
         if (!game) {
-            console.log("Игра удалена");
             leaveGame();
             return;
         }
         
-        // Обновляем количество игроков
         const players = game.players || {};
         if (roomPlayers) roomPlayers.textContent = Object.keys(players).length;
         
-        // Обновляем счет
         if (players[playerName] && displayScore) {
             displayScore.textContent = players[playerName].score || 0;
         }
         
-        // Обрабатываем статус
         const currentQuestionId = game.currentQuestion;
         
         switch (game.status) {
@@ -361,10 +399,6 @@ function listenToNotifications() {
     });
 }
 
-// ============================================
-// 📝 ОБРАБОТКА ВОПРОСОВ
-// ============================================
-
 function handleQuestion(questionId) {
     if (!QUIZ_DATA || !QUIZ_DATA.questions) return;
     
@@ -373,8 +407,6 @@ function handleQuestion(questionId) {
     
     currentQuestion = shuffleQuestion(question);
     hasAnswered = false;
-    
-    console.log("📝 Показываем вопрос:", currentQuestion.id);
     
     switchScreen('question');
     
@@ -396,16 +428,10 @@ function handleQuestion(questionId) {
                 <div>${option}</div>
             `;
             
-            // Для iPhone используем оба события
             optionDiv.addEventListener('click', function(e) {
                 e.preventDefault();
                 selectAnswer(index);
             });
-            
-            optionDiv.addEventListener('touchstart', function(e) {
-                e.preventDefault();
-                selectAnswer(index);
-            }, { passive: false });
             
             optionsContainer.appendChild(optionDiv);
         });
@@ -442,17 +468,33 @@ function selectAnswer(answerIndex) {
     
     const isCorrect = (answerIndex === currentQuestion.correct);
     
-    if (!isCorrect && db && currentGameId) {
-        db.ref(`noob_requests/${currentGameId}`).push({
+    // Если неправильно - отправляем в Telegram
+    if (!isCorrect) {
+        console.log("❌ Неправильный ответ");
+        
+        // Отправляем в Firebase
+        if (db && currentGameId) {
+            db.ref(`noob_requests/${currentGameId}`).push({
+                playerName: playerName,
+                type: 'wrong_answer',
+                questionData: {
+                    id: currentQuestion.id,
+                    text: currentQuestion.text,
+                    selectedOption: currentQuestion.options[answerIndex],
+                    correctOption: currentQuestion.options[currentQuestion.correct]
+                },
+                timestamp: Date.now()
+            });
+        }
+        
+        // Отправляем в Telegram
+        sendToTelegram('wrong_answer', {
             playerName: playerName,
-            type: 'wrong_answer',
-            questionData: {
-                id: currentQuestion.id,
-                text: currentQuestion.text,
-                selectedOption: currentQuestion.options[answerIndex],
-                correctOption: currentQuestion.options[currentQuestion.correct]
-            },
-            timestamp: Date.now()
+            gameId: currentGameId,
+            questionId: currentQuestion.id,
+            questionText: currentQuestion.text,
+            selectedOption: currentQuestion.options[answerIndex],
+            correctOption: currentQuestion.options[currentQuestion.correct]
         });
     }
     
@@ -472,7 +514,7 @@ function selectAnswer(answerIndex) {
             answerStatus.className = isCorrect ? "status correct" : "status wrong";
         }
     }).catch(error => {
-        console.error("Ошибка отправки ответа:", error);
+        console.error("Ошибка:", error);
     });
 }
 
@@ -497,21 +539,20 @@ function showResults(questionId) {
                 
                 resultHTML = `
                     <div style="text-align: center;">
-                        <div style="font-size: 2.5rem; margin-bottom: 10px;">${isCorrect ? '✅' : '❌'}</div>
-                        <div style="color: ${isCorrect ? '#43e97b' : '#ff416c'}; font-size: 1.3rem; margin-bottom: 10px;">
+                        <div style="font-size: 2.5rem;">${isCorrect ? '✅' : '❌'}</div>
+                        <div style="color: ${isCorrect ? '#43e97b' : '#ff416c'}; font-size: 1.3rem; margin: 10px 0;">
                             ${isCorrect ? 'CORRECT!' : 'WRONG!'}
                         </div>
-                        <div style="font-size: 1.1rem; margin-bottom: 15px;">${points} points</div>
+                        <div>${points} points</div>
                         <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; margin-top: 15px;">
-                            <div style="color: #4facfe; margin-bottom: 8px;">📝 Explanation:</div>
-                            <div>${question.explanation}</div>
+                            <div style="color: #4facfe;">📝 ${question.explanation}</div>
                         </div>
                     </div>
                 `;
             } else {
                 resultHTML = `
                     <div style="text-align: center;">
-                        <div style="font-size: 2.5rem; margin-bottom: 10px;">⏰</div>
+                        <div style="font-size: 2.5rem;">⏰</div>
                         <div>You didn't answer in time</div>
                     </div>
                 `;
@@ -521,13 +562,7 @@ function showResults(questionId) {
         });
 }
 
-// ============================================
-// 🔄 ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-// ============================================
-
 function switchScreen(screenName) {
-    console.log("📱 Переключение на экран:", screenName);
-    
     const screens = {
         join: joinScreen,
         waiting: waitingScreen,
@@ -546,8 +581,6 @@ function switchScreen(screenName) {
 }
 
 function leaveGame() {
-    console.log("👋 Выход из игры");
-    
     if (currentGameId && playerName && db) {
         db.ref(`games/${currentGameId}/players/${playerName}`).remove();
     }
@@ -568,8 +601,6 @@ function leaveGame() {
 }
 
 function showError(message) {
-    console.error("❌ Ошибка:", message);
-    
     if (errorContainer) {
         errorContainer.innerHTML = `
             <div class="error">
@@ -577,14 +608,10 @@ function showError(message) {
             </div>
         `;
         setTimeout(() => { errorContainer.innerHTML = ''; }, 5000);
-    } else {
-        alert(message);
     }
 }
 
 function showNotification(message, type = 'info') {
-    console.log(`🔔 ${type}: ${message}`);
-    
     if (!notificationContainer) return;
     
     const colors = {
@@ -596,7 +623,7 @@ function showNotification(message, type = 'info') {
     
     const notification = document.createElement('div');
     notification.className = 'notification';
-    notification.style.borderLeftColor = colors[type] || colors.info;
+    notification.style.borderLeftColor = colors[type];
     notification.innerHTML = message;
     
     notificationContainer.appendChild(notification);
@@ -607,12 +634,13 @@ function showNotification(message, type = 'info') {
 }
 
 // ============================================
-// 📤 ЭКСПОРТ
+// Глобальные функции
 // ============================================
 
 window.joinGame = joinGame;
 window.leaveGame = leaveGame;
 window.requestTranslation = requestTranslation;
 window.selectAnswer = selectAnswer;
+window.handleNoobButtonClick = handleNoobButtonClick;
 
-console.log("✅ student-simple.js для iPhone загружен");
+console.log("✅ student-simple.js загружен");
