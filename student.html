@@ -161,34 +161,6 @@
             border-color: rgba(255, 65, 108, 0.5);
         }
         
-        .noob-button {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-        }
-        
-        .noob-btn {
-            width: 60px;
-            height: 60px;
-            border-radius: 30px;
-            background: #f093fb;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            font-size: 1.8rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            box-shadow: 0 10px 20px rgba(240, 147, 251, 0.3);
-            border: none;
-        }
-        
-        .noob-btn:active {
-            transform: scale(0.9);
-        }
-        
         .info-box {
             background: rgba(0, 0, 0, 0.3);
             border-radius: 16px;
@@ -360,11 +332,8 @@
 <body>
     <div class="notification-container" id="notificationContainer"></div>
     
-    <div class="noob-button">
-        <button class="noob-btn" id="noobButton">🤓</button>
-    </div>
-    
     <div class="container">
+        <!-- ЭКРАН ВХОДА -->
         <div id="joinScreen" class="screen active">
             <div class="header">
                 <div class="logo">🇬🇧</div>
@@ -390,10 +359,10 @@
             
             <div class="info-box">
                 <p><i class="fas fa-info-circle"></i> Enter the 8-digit code from your teacher</p>
-                <p style="margin-top: 8px;"><i class="fas fa-robot"></i> 🤓 Noob button = translation help</p>
             </div>
         </div>
         
+        <!-- ЭКРАН ОЖИДАНИЯ -->
         <div id="waitingScreen" class="screen">
             <div class="header">
                 <div class="loader"></div>
@@ -425,6 +394,7 @@
             </button>
         </div>
         
+        <!-- ЭКРАН ВОПРОСА -->
         <div id="questionScreen" class="screen">
             <div class="question-header">
                 <span style="color: #4facfe;">ENGLISH</span>
@@ -442,6 +412,7 @@
             </div>
         </div>
         
+        <!-- ЭКРАН РЕЗУЛЬТАТА -->
         <div id="resultScreen" class="screen">
             <div class="header">
                 <div class="logo">📊</div>
@@ -457,8 +428,8 @@
             </div>
         </div>
     </div>
-    
+
     <script src="firebase-config.js"></script>
-    <script src="student-simple.js"></script>
+    <script src="student.js"></script>
 </body>
 </html>
