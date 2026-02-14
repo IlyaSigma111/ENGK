@@ -1,8 +1,8 @@
 // ============================================
-// FIREBASE CONFIG - ENGLISH: FEARS AND PHOBIAS
+// FIREBASE CONFIG - С КНОПКАМИ ДЛЯ МОДЕРАЦИИ
 // ============================================
 
-// 🔥 НОВАЯ КОНФИГУРАЦИЯ FIREBASE (твоя)
+// 🔥 НОВАЯ КОНФИГУРАЦИЯ FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyBC4rcVKEMj88Dm2snG5XXxAuZqeNPMc3c",
   authDomain: "engk-5a74a.firebaseapp.com",
@@ -26,29 +26,125 @@ try {
 }
 
 // ============================================
-// 📚 30 ВОПРОСОВ ПО АНГЛИЙСКОМУ: FEARS AND PHOBIAS
+// 🤖 TELEGRAM BOT С КНОПКАМИ
 // ============================================
 
-// Функция для перемешивания вариантов ответов
-function shuffleOptions(question) {
-    const options = [...question.options];
-    const correctAnswer = options[question.correct];
+window.TELEGRAM_CONFIG = {
+    botToken: "8110893337:AAEXbYtRyyrt_k1oAwjsOhOBUsdPnGCH_oM",
     
-    // Перемешиваем массив
-    for (let i = options.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [options[i], options[j]] = [options[j], options[i]];
+    // Отправка сообщения с кнопками
+    sendModerationMessage(playerName, action, questionData) {
+        const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
+        
+        let message = '';
+        let keyboard = {};
+        
+        if (action === 'translation') {
+            message = `<b>🤓 ЗАПРОС ПЕРЕВОДА</b>\n`;
+            message += `👤 Игрок: ${playerName}\n`;
+            message += `🔢 Вопрос: ${questionData.id}\n`;
+            message += `📝 Текст: ${questionData.text}\n`;
+            message += `⏰ Время: ${new Date().toLocaleString('ru-RU')}\n\n`;
+            message += `❓ Разрешить перевод?`;
+            
+            keyboard = {
+                inline_keyboard: [
+                    [
+                        { text: "✅ РАЗРЕШИТЬ", callback_data: `translate_allow_${playerName}_${questionData.id}` },
+                        { text: "❌ ОТКАЗАТЬ", callback_data: `translate_deny_${playerName}_${questionData.id}` }
+                    ]
+                ]
+            };
+        }
+        
+        if (action === 'wrong_answer') {
+            message = `<b>🤓 ОШИБКА ЧАЙНИКА</b>\n`;
+            message += `👤 Игрок: ${playerName}\n`;
+            message += `🔢 Вопрос: ${questionData.id}\n`;
+            message += `📝 Текст: ${questionData.text}\n`;
+            message += `❌ Выбрал: ${questionData.selectedOption}\n`;
+            message += `✅ Правильно: ${questionData.correctOption}\n`;
+            message += `⏰ Время: ${new Date().toLocaleString('ru-RU')}\n\n`;
+            message += `🎮 Засчитать ответ?`;
+            
+            keyboard = {
+                inline_keyboard: [
+                    [
+                        { text: "✅ ЗАСЧИТАТЬ", callback_data: `accept_${playerName}_${questionData.id}` },
+                        { text: "❌ НЕ ЗАСЧИТЫВАТЬ", callback_data: `reject_${playerName}_${questionData.id}` }
+                    ]
+                ]
+            };
+        }
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                chat_id: "1512777396", // Твой chat ID
+                text: message,
+                parse_mode: 'HTML',
+                reply_markup: keyboard
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.ok) {
+                console.log("✅ Сообщение с кнопками отправлено");
+            }
+        })
+        .catch(error => {
+            console.error("❌ Ошибка:", error);
+        });
+    },
+    
+    // Обработка нажатий на кнопки (нужно будет настроить webhook)
+    handleCallback(callbackData) {
+        const [action, result, playerName, questionId] = callbackData.split('_');
+        
+        if (action === 'translate') {
+            if (result === 'allow') {
+                // Разрешить перевод - показать перевод
+                this.sendToPlayer(playerName, "🌐 Перевод разрешён модератором!");
+            } else {
+                // Отказать в переводе
+                this.sendToPlayer(playerName, "❌ Модератор отказал в переводе. Пробуй сам!");
+            }
+        }
+        
+        if (action === 'accept' || action === 'reject') {
+            const accept = action === 'accept';
+            // Засчитать или не засчитать ответ
+            this.updatePlayerScore(playerName, questionId, accept);
+            
+            const message = accept ? "✅ Модератор засчитал ответ!" : "❌ Модератор не засчитал ответ";
+            this.sendToPlayer(playerName, message);
+        }
+    },
+    
+    // Отправить сообщение игроку (через Firebase или уведомление)
+    sendToPlayer(playerName, message) {
+        // Сохраняем в Firebase, а student.html будет слушать
+        const notificationRef = db.ref(`notifications/${playerName}`).push();
+        notificationRef.set({
+            message: message,
+            timestamp: Date.now(),
+            read: false
+        });
+    },
+    
+    // Обновить счёт игрока
+    updatePlayerScore(playerName, questionId, accept) {
+        // Найти текущую игру и игрока
+        // Если accept = true, добавить очки
     }
-    
-    // Находим новый индекс правильного ответа
-    const newCorrectIndex = options.indexOf(correctAnswer);
-    
-    return {
-        ...question,
-        options: options,
-        correct: newCorrectIndex
-    };
-}
+};
+
+// ============================================
+// 📚 30 ВОПРОСОВ (те же, что я скинул ранее)
+// ============================================
 
 window.QUIZ_DATA = {
     id: "english_fears_phobias",
@@ -58,24 +154,32 @@ window.QUIZ_DATA = {
     author: "English Teacher",
     version: "2024.1",
     
-    // Получить вопрос с перемешанными вариантами
+    // Функция для перемешивания вариантов
     getShuffledQuestion(index) {
         if (index < 0 || index >= this.questions.length) return null;
-        return shuffleOptions({...this.questions[index]});
+        const question = {...this.questions[index]};
+        const options = [...question.options];
+        const correctAnswer = options[question.correct];
+        
+        // Перемешиваем
+        for (let i = options.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [options[i], options[j]] = [options[j], options[i]];
+        }
+        
+        question.options = options;
+        question.correct = options.indexOf(correctAnswer);
+        
+        return question;
     },
     
     questions: [
-        // ===== 🟢 ЛЁГКИЕ ВОПРОСЫ (1-10) - Vocabulary =====
+        // 🟢 ЛЁГКИЕ (1-10)
         {
             id: 1,
             type: "easy",
             text: "How do you translate the word 'fear' into Russian?",
-            options: [
-                "Страх",
-                "Радость",
-                "Гнев",
-                "Удивление"
-            ],
+            options: ["Страх", "Радость", "Гнев", "Удивление"],
             correct: 0,
             explanation: "'Fear' means 'страх' in Russian.",
             points: 1,
@@ -85,12 +189,7 @@ window.QUIZ_DATA = {
             id: 2,
             type: "easy",
             text: "What does the word 'spider' mean in Russian?",
-            options: [
-                "Змея",
-                "Паук",
-                "Мышь",
-                "Птица"
-            ],
+            options: ["Змея", "Паук", "Мышь", "Птица"],
             correct: 1,
             explanation: "'Spider' is 'паук' in Russian.",
             points: 1,
@@ -100,14 +199,9 @@ window.QUIZ_DATA = {
             id: 3,
             type: "easy",
             text: "How do you say 'тьма' in English?",
-            options: [
-                "Light",
-                "Darkness",
-                "Brightness",
-                "Shadow"
-            ],
+            options: ["Light", "Darkness", "Brightness", "Shadow"],
             correct: 1,
-            explanation: "'Тьма' translates to 'darkness' in English.",
+            explanation: "'Тьма' translates to 'darkness'.",
             points: 1,
             difficulty: "easy"
         },
@@ -115,14 +209,9 @@ window.QUIZ_DATA = {
             id: 4,
             type: "easy",
             text: "What is the English word for 'высота'?",
-            options: [
-                "Depth",
-                "Width",
-                "Height",
-                "Length"
-            ],
+            options: ["Depth", "Width", "Height", "Length"],
             correct: 2,
-            explanation: "'Высота' means 'height' in English.",
+            explanation: "'Высота' means 'height'.",
             points: 1,
             difficulty: "easy"
         },
@@ -130,14 +219,9 @@ window.QUIZ_DATA = {
             id: 5,
             type: "easy",
             text: "How do you translate 'толпа' into English?",
-            options: [
-                "Alone",
-                "Crowd",
-                "Room",
-                "Street"
-            ],
+            options: ["Alone", "Crowd", "Room", "Street"],
             correct: 1,
-            explanation: "'Толпа' is 'crowd' in English.",
+            explanation: "'Толпа' is 'crowd'.",
             points: 1,
             difficulty: "easy"
         },
@@ -145,14 +229,9 @@ window.QUIZ_DATA = {
             id: 6,
             type: "easy",
             text: "What does 'snake' mean in Russian?",
-            options: [
-                "Паук",
-                "Ящерица",
-                "Змея",
-                "Крокодил"
-            ],
+            options: ["Паук", "Ящерица", "Змея", "Крокодил"],
             correct: 2,
-            explanation: "'Snake' means 'змея' in Russian.",
+            explanation: "'Snake' means 'змея'.",
             points: 1,
             difficulty: "easy"
         },
@@ -160,14 +239,9 @@ window.QUIZ_DATA = {
             id: 7,
             type: "easy",
             text: "How do you say 'полёт' in English?",
-            options: [
-                "Trip",
-                "Flight",
-                "Journey",
-                "Walk"
-            ],
+            options: ["Trip", "Flight", "Journey", "Walk"],
             correct: 1,
-            explanation: "'Полёт' translates to 'flight' in English.",
+            explanation: "'Полёт' translates to 'flight'.",
             points: 1,
             difficulty: "easy"
         },
@@ -175,14 +249,9 @@ window.QUIZ_DATA = {
             id: 8,
             type: "easy",
             text: "What is the English for 'публичная речь'?",
-            options: [
-                "Private conversation",
-                "Public speaking",
-                "Loud scream",
-                "Quiet whisper"
-            ],
+            options: ["Private conversation", "Public speaking", "Loud scream", "Quiet whisper"],
             correct: 1,
-            explanation: "'Публичная речь' is 'public speaking' in English.",
+            explanation: "'Публичная речь' is 'public speaking'.",
             points: 1,
             difficulty: "easy"
         },
@@ -190,14 +259,9 @@ window.QUIZ_DATA = {
             id: 9,
             type: "easy",
             text: "How do you translate 'буря' into English?",
-            options: [
-                "Rain",
-                "Snow",
-                "Storm",
-                "Wind"
-            ],
+            options: ["Rain", "Snow", "Storm", "Wind"],
             correct: 2,
-            explanation: "'Буря' means 'storm' in English.",
+            explanation: "'Буря' means 'storm'.",
             points: 1,
             difficulty: "easy"
         },
@@ -205,31 +269,21 @@ window.QUIZ_DATA = {
             id: 10,
             type: "easy",
             text: "What does 'alone' mean in Russian?",
-            options: [
-                "Вместе",
-                "Одинокий",
-                "Счастливый",
-                "Грустный"
-            ],
+            options: ["Вместе", "Одинокий", "Счастливый", "Грустный"],
             correct: 1,
-            explanation: "'Alone' means 'одинокий' in Russian.",
+            explanation: "'Alone' means 'одинокий'.",
             points: 1,
             difficulty: "easy"
         },
         
-        // ===== 🟡 СРЕДНИЕ ВОПРОСЫ (11-20) - Fill in the blank =====
+        // 🟡 СРЕДНИЕ (11-20)
         {
             id: 11,
             type: "medium",
             text: "Many people have a _____ of spiders.",
-            options: [
-                "fear",
-                "like",
-                "love",
-                "hate"
-            ],
+            options: ["fear", "like", "love", "hate"],
             correct: 0,
-            explanation: "The correct phrase is 'fear of spiders'.",
+            explanation: "'Fear of spiders' is the correct phrase.",
             points: 2,
             difficulty: "medium"
         },
@@ -237,14 +291,9 @@ window.QUIZ_DATA = {
             id: 12,
             type: "medium",
             text: "She feels _____ when she sees a snake.",
-            options: [
-                "happy",
-                "scared",
-                "excited",
-                "calm"
-            ],
+            options: ["happy", "scared", "excited", "calm"],
             correct: 1,
-            explanation: "People usually feel 'scared' when they see a snake.",
+            explanation: "People usually feel 'scared' of snakes.",
             points: 2,
             difficulty: "medium"
         },
@@ -252,14 +301,9 @@ window.QUIZ_DATA = {
             id: 13,
             type: "medium",
             text: "He is afraid of _____ in the dark.",
-            options: [
-                "being",
-                "be",
-                "been",
-                "is"
-            ],
+            options: ["being", "be", "been", "is"],
             correct: 0,
-            explanation: "After preposition 'of' we use gerund: 'being'.",
+            explanation: "After 'of' we use gerund: 'being'.",
             points: 2,
             difficulty: "medium"
         },
@@ -267,12 +311,7 @@ window.QUIZ_DATA = {
             id: 14,
             type: "medium",
             text: "I have a phobia of _____ in front of people.",
-            options: [
-                "speaking",
-                "speak",
-                "spoke",
-                "speaks"
-            ],
+            options: ["speaking", "speak", "spoke", "speaks"],
             correct: 0,
             explanation: "After 'of' we need gerund: 'speaking'.",
             points: 2,
@@ -282,12 +321,7 @@ window.QUIZ_DATA = {
             id: 15,
             type: "medium",
             text: "The _____ of heights is called acrophobia.",
-            options: [
-                "fear",
-                "love",
-                "hate",
-                "joy"
-            ],
+            options: ["fear", "love", "hate", "joy"],
             correct: 0,
             explanation: "Acrophobia is the 'fear' of heights.",
             points: 2,
@@ -297,14 +331,9 @@ window.QUIZ_DATA = {
             id: 16,
             type: "medium",
             text: "She can't fly because she's afraid of _____.",
-            options: [
-                "planes",
-                "cars",
-                "trains",
-                "buses"
-            ],
+            options: ["planes", "cars", "trains", "buses"],
             correct: 0,
-            explanation: "If you can't fly, you're afraid of 'planes'.",
+            explanation: "Fear of flying means fear of 'planes'.",
             points: 2,
             difficulty: "medium"
         },
@@ -312,12 +341,7 @@ window.QUIZ_DATA = {
             id: 17,
             type: "medium",
             text: "He feels anxious when he is in _____ places.",
-            options: [
-                "crowded",
-                "empty",
-                "quiet",
-                "clean"
-            ],
+            options: ["crowded", "empty", "quiet", "clean"],
             correct: 0,
             explanation: "Anxiety often happens in 'crowded' places.",
             points: 2,
@@ -327,14 +351,9 @@ window.QUIZ_DATA = {
             id: 18,
             type: "medium",
             text: "My sister has a phobia of _____ water.",
-            options: [
-                "deep",
-                "shallow",
-                "warm",
-                "cold"
-            ],
+            options: ["deep", "shallow", "warm", "cold"],
             correct: 0,
-            explanation: "Aquaphobia is the fear of 'deep' water.",
+            explanation: "Aquaphobia is fear of 'deep' water.",
             points: 2,
             difficulty: "medium"
         },
@@ -342,14 +361,9 @@ window.QUIZ_DATA = {
             id: 19,
             type: "medium",
             text: "_____ is the fear of thunderstorms.",
-            options: [
-                "Astraphobia",
-                "Arachnophobia",
-                "Acrophobia",
-                "Claustrophobia"
-            ],
+            options: ["Astraphobia", "Arachnophobia", "Acrophobia", "Claustrophobia"],
             correct: 0,
-            explanation: "Astraphobia is the fear of thunder and lightning.",
+            explanation: "Astraphobia = fear of thunder/lightning.",
             points: 2,
             difficulty: "medium"
         },
@@ -357,106 +371,71 @@ window.QUIZ_DATA = {
             id: 20,
             type: "medium",
             text: "He couldn't sleep because he was _____ of the dark.",
-            options: [
-                "scared",
-                "happy",
-                "tired",
-                "hungry"
-            ],
+            options: ["scared", "happy", "tired", "hungry"],
             correct: 0,
-            explanation: "If you can't sleep because of dark, you're 'scared'.",
+            explanation: "Fear of dark makes you 'scared'.",
             points: 2,
             difficulty: "medium"
         },
         
-        // ===== 🔴 СЛОЖНЫЕ ВОПРОСЫ (21-30) - Preferences =====
+        // 🔴 СЛОЖНЫЕ - PREFERENCES (21-30)
         {
             id: 21,
             type: "hard",
             text: "If you're afraid of heights, which place would you PREFER to visit?",
-            options: [
-                "A ground floor café",
-                "A rooftop restaurant",
-                "An observation deck",
-                "A mountain peak"
-            ],
+            options: ["A ground floor café", "A rooftop restaurant", "An observation deck", "A mountain peak"],
             correct: 0,
-            explanation: "Someone afraid of heights would prefer to stay on the ground floor.",
+            explanation: "Ground floor is safest for fear of heights.",
             points: 3,
             difficulty: "hard"
         },
         {
             id: 22,
             type: "hard",
-            text: "Someone with arachnophobia (fear of spiders) would PREFER to:",
-            options: [
-                "Visit a butterfly garden",
-                "Go to a spider exhibition",
-                "Watch a movie about tarantulas",
-                "Hold a tarantula"
-            ],
+            text: "Someone with arachnophobia would PREFER to:",
+            options: ["Visit a butterfly garden", "See a spider exhibit", "Watch a tarantula movie", "Hold a tarantula"],
             correct: 0,
-            explanation: "A butterfly garden has no spiders, so it's the best choice.",
+            explanation: "Butterfly garden has no spiders.",
             points: 3,
             difficulty: "hard"
         },
         {
             id: 23,
             type: "hard",
-            text: "If you're afraid of public speaking, which job would you PREFER?",
-            options: [
-                "Librarian",
-                "News anchor",
-                "Teacher",
-                "Tour guide"
-            ],
+            text: "If you fear public speaking, which job would you PREFER?",
+            options: ["Librarian", "News anchor", "Teacher", "Tour guide"],
             correct: 0,
-            explanation: "Librarians work quietly with books, no public speaking required.",
+            explanation: "Librarians work quietly with books.",
             points: 3,
             difficulty: "hard"
         },
         {
             id: 24,
             type: "hard",
-            text: "A person afraid of flying would SPECIFICALLY choose to travel by:",
-            options: [
-                "Train",
-                "Plane",
-                "Hot air balloon",
-                "Helicopter"
-            ],
+            text: "A person afraid of flying would SPECIFICALLY choose:",
+            options: ["Train travel", "Plane travel", "Hot air balloon", "Helicopter"],
             correct: 0,
-            explanation: "Trains stay on the ground - the safest choice for fear of flying.",
+            explanation: "Trains stay safely on the ground.",
             points: 3,
             difficulty: "hard"
         },
         {
             id: 25,
             type: "hard",
-            text: "Someone with claustrophobia (fear of small spaces) would PREFER to live in:",
-            options: [
-                "A house with big windows",
-                "A small apartment",
-                "An elevator",
-                "A basement"
-            ],
+            text: "Someone with claustrophobia would PREFER:",
+            options: ["A house with big windows", "A small apartment", "An elevator ride", "A basement room"],
             correct: 0,
-            explanation: "Big windows make spaces feel larger and less confining.",
+            explanation: "Big windows make spaces feel larger.",
             points: 3,
             difficulty: "hard"
         },
         {
             id: 26,
             type: "hard",
-            text: "If you're afraid of the dark, you would MOST LIKELY:",
-            options: [
-                "Sleep with a night light",
-                "Go camping alone",
-                "Explore caves",
-                "Watch horror movies at night"
-            ],
+            text: "If afraid of the dark, you would MOST LIKELY:",
+            options: ["Use a night light", "Go camping alone", "Explore caves", "Watch horror films"],
             correct: 0,
-            explanation: "A night light helps people feel safer in the dark.",
+            explanation: "Night lights help with fear of dark.",
             points: 3,
             difficulty: "hard"
         },
@@ -464,123 +443,47 @@ window.QUIZ_DATA = {
             id: 27,
             type: "hard",
             text: "A person afraid of dogs would PREFER to walk:",
-            options: [
-                "In a dog-free park",
-                "At a dog walking area",
-                "To a pet store",
-                "Through a kennel"
-            ],
+            options: ["In a dog-free park", "At a dog park", "To a pet store", "Through a kennel"],
             correct: 0,
-            explanation: "A dog-free park has no dogs, so it's the safest choice.",
+            explanation: "Dog-free park has no dogs at all.",
             points: 3,
             difficulty: "hard"
         },
         {
             id: 28,
             type: "hard",
-            text: "Someone with aquaphobia (fear of water) would SPECIFICALLY avoid:",
-            options: [
-                "Swimming in the ocean",
-                "Taking a shower",
-                "Drinking water",
-                "Washing hands"
-            ],
+            text: "Someone with aquaphobia would SPECIFICALLY avoid:",
+            options: ["Swimming in the ocean", "Taking a shower", "Drinking water", "Washing hands"],
             correct: 0,
-            explanation: "The ocean is deep water - the scariest for someone with aquaphobia.",
+            explanation: "The ocean is deep and scary.",
             points: 3,
             difficulty: "hard"
         },
         {
             id: 29,
             type: "hard",
-            text: "If you're afraid of crowds, you would PREFER to shop:",
-            options: [
-                "Online",
-                "On Black Friday",
-                "At a concert",
-                "In a busy mall"
-            ],
+            text: "If you fear crowds, you would PREFER to shop:",
+            options: ["Online", "On Black Friday", "At a concert", "In a busy mall"],
             correct: 0,
-            explanation: "Online shopping means no crowds at all.",
+            explanation: "Online shopping = no crowds.",
             points: 3,
             difficulty: "hard"
         },
         {
             id: 30,
             type: "hard",
-            text: "A person with social anxiety would MOST LIKELY enjoy:",
-            options: [
-                "Reading a book alone at home",
-                "Giving a presentation",
-                "Attending a big party",
-                "Performing on stage"
-            ],
+            text: "A person with social anxiety would MOST enjoy:",
+            options: ["Reading alone at home", "Giving a speech", "A big party", "Performing on stage"],
             correct: 0,
-            explanation: "Reading alone at home involves no social interaction.",
+            explanation: "Reading alone = no social interaction.",
             points: 3,
             difficulty: "hard"
         }
     ]
 };
 
-console.log(`✅ Загружено ${QUIZ_DATA.questions.length} вопросов по английскому (Fears and Phobias)`);
-console.log(`🎮 Режим для чайников активирован!`);
-
-// ============================================
-// 🤖 TELEGRAM BOT CONFIG
-// ============================================
-
-window.TELEGRAM_CONFIG = {
-    botToken: "8110893337:AAEXbYtRyyrt_k1oAwjsOhOBUsdPnGCH_oM",
-    chatId: "1512777396", // Твой chat ID (можно получить у @userinfobot)
-    
-    // Функция отправки статистики в Telegram
-    sendToTelegram(message) {
-        const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`;
-        
-        fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                chat_id: this.chatId,
-                text: message,
-                parse_mode: 'HTML'
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.ok) {
-                console.log("✅ Отправлено в Telegram:", message);
-            } else {
-                console.error("❌ Ошибка Telegram:", data);
-            }
-        })
-        .catch(error => {
-            console.error("❌ Ошибка отправки:", error);
-        });
-    },
-    
-    // Логирование действий "чайников"
-    logNoobAction(playerName, action, questionId, wasCorrect) {
-        const date = new Date().toLocaleString('ru-RU');
-        const emoji = wasCorrect ? '✅' : '❌';
-        const status = wasCorrect ? 'ПРАВИЛЬНО' : 'ОШИБСЯ';
-        
-        let message = `<b>🤓 РЕЖИМ ЧАЙНИКА</b>\n`;
-        message += `👤 Игрок: ${playerName}\n`;
-        message += `📅 Время: ${date}\n`;
-        message += `🔢 Вопрос №${questionId}\n`;
-        message += `${emoji} Результат: ${status}\n`;
-        
-        if (action === 'translation') {
-            message += `🌐 Запросил перевод вопроса\n`;
-        }
-        
-        this.sendToTelegram(message);
-    }
-};
+console.log(`✅ Загружено ${QUIZ_DATA.questions.length} вопросов по английскому`);
+console.log(`🤖 Telegram-бот с кнопками готов!`);
 
 // ============================================
 // 🛠️ СИСТЕМА МОДЕРАТОРОВ
@@ -656,4 +559,40 @@ window.moderatorSystem = {
                                     padding: 15px 25px;
                                     background: rgba(255, 65, 108, 0.2);
                                     color: white;
-                                    border: 1
+                                    border: 1px solid rgba(255, 65, 108, 0.5);
+                                    border-radius: 12px;
+                                    cursor: pointer;
+                                ">
+                            Отмена
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+    },
+    
+    checkPassword() {
+        const input = document.getElementById('moderatorPassword');
+        if (!input) return;
+        
+        if (input.value === this.MODERATOR_PASSWORD) {
+            this.setModerator(true);
+            this.hideModal();
+            this.showModeratorControls();
+            alert('✅ Вы вошли как модератор!');
+        } else {
+            alert('❌ Неверный пароль!');
+        }
+    },
+    
+    hideModal() {
+        const modal = document.getElementById('moderatorModal');
+        if (modal) modal.remove();
+    },
+    
+    showModeratorControls() {
+        // Показать элементы управления модератора
+    }
+};
