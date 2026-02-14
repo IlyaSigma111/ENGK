@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Panel - English Quiz: Fears and Phobias</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        /* Стили из твоего teacher.html с заменой цветов */
+        :root {
+            --primary-color: #4facfe;
+            --secondary-color: #f093fb;
+            --success-color: #43e97b;
+            --danger-color: #ff416c;
+        }
+        
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: white;
+            margin: 0;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* ... остальные стили из teacher.html ... */
+        
+        /* Добавляем стиль для статистики чайников */
+        .noob-stats {
+            background: rgba(240, 147, 251, 0.1);
+            border: 1px solid rgba(240, 147, 251, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .noob-stats h3 {
+            color: #f093fb;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="mainInterface">
+        <!-- HEADER -->
+        <header class="teacher-header">
+            <div class="header-left">
+                <h1>🇬🇧 TEACHER PANEL</h1>
+                <p>English: Fears and Phobias | Quiz Management</p>
+            </div>
+            <div class="header-buttons">
+                <div class="game-code-box">
+                    <div class="code-label">GAME CODE:</div>
+                    <div id="gameCode" class="code-display">----</div>
+                </div>
+                <a href="index.html" class="glass-btn" style="padding: 15px 25px;">
+                    <i class="fas fa-home"></i> Home
+                </a>
+            </div>
+        </header>
+        
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+            <!-- LEFT COLUMN -->
+            <div class="left-column">
+                <!-- CONTROL PANEL -->
+                <div class="glass-panel">
+                    <h2><i class="fas fa-gamepad"></i> GAME CONTROL</h2>
+                    
+                    <div id="startSection">
+                        <p>Start a new quiz for your class</p>
+                        <button onclick="startNewGame()" class="glass-btn glass-btn-create">
+                            <i class="fas fa-plus-circle"></i> CREATE NEW GAME
+                        </button>
+                    </div>
+                    
+                    <div id="gameControls" style="display: none;">
+                        <div class="control-buttons">
+                            <button onclick="startNextQuestion()" class="glass-btn glass-btn-start">
+                                <i class="fas fa-play"></i> SHOW QUESTION
+                            </button>
+                            <button onclick="showAnswer()" class="glass-btn glass-btn-show">
+                                <i class="fas fa-eye"></i> SHOW ANSWER
+                            </button>
+                            <button onclick="nextQuestion()" class="glass-btn glass-btn-next">
+                                <i class="fas fa-forward"></i> NEXT QUESTION
+                            </button>
+                            <button onclick="resetGame()" class="glass-btn glass-btn-reset">
+                                <i class="fas fa-redo"></i> RESET GAME
+                            </button>
+                        </div>
+                        
+                        <div class="question-info">
+                            <div class="info-item">
+                                <span>Current Question</span>
+                                <span id="currentQ" style="color: #43e97b;">0/30</span>
+                            </div>
+                            <div class="info-item">
+                                <span>Players Online</span>
+                                <span id="playerCount" style="color: #4facfe;">0</span>
+                            </div>
+                        </div>
+                        
+                        <!-- СТАТИСТИКА ЧАЙНИКОВ -->
+                        <div class="noob-stats">
+                            <h3><i class="fas fa-robot"></i> 🤓 Noob Mode Stats</h3>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Translation requests:</span>
+                                <span id="noobTranslations" style="color: #f093fb;">0</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                                <span>Wrong answers (pending):</span>
+                                <span id="noobWrong" style="color: #ff416c;">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- PLAYERS LIST -->
+                <div class="glass-panel scrollable-panel">
+                    <h2><i class="fas fa-users"></i> PLAYERS</h2>
+                    <div id="playersList" class="players-list">
+                        <div class="empty-state">
+                            <div class="empty-icon">👤</div>
+                            <p>Players will appear here</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- RIGHT COLUMN -->
+            <div class="right-column">
+                <!-- STATS -->
+                <div class="glass-panel">
+                    <h2><i class="fas fa-chart-bar"></i> ANSWER STATISTICS</h2>
+                    <div id="statsContent" class="stats-content">
+                        <div class="empty-state">
+                            <div class="empty-icon">📊</div>
+                            <p>Statistics will appear after answers</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ALL QUESTIONS -->
+                <div class="glass-panel scrollable-panel">
+                    <h2><i class="fas fa-list-ol"></i> ALL QUESTIONS (30)</h2>
+                    <div id="questionsList" class="questions-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PRESENTATION MODE -->
+    <div id="presentationMode" class="presentation-mode">
+        <div class="presentation-header">
+            <div class="presentation-info">
+                <span style="color: #4facfe;">PRESENTATION MODE</span>
+                <span>Question <span id="presentationQNum">1</span>/30</span>
+            </div>
+            <div class="answers-stats">
+                <div class="answer-stat-box answered">
+                    <div>Answered</div>
+                    <div><span id="answeredCount">0</span>/<span id="totalPlayers">0</span></div>
+                </div>
+                <div class="answer-stat-box correct">
+                    <div>Correct</div>
+                    <div><span id="correctCount">0</span>/<span id="answeredCount2">0</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="presentation-content">
+            <div id="presentationQuestion" class="presentation-question"></div>
+        </div>
+        <div class="presentation-controls">
+            <button onclick="exitPresentation()" class="glass-btn glass-btn-reset">
+                <i class="fas fa-times"></i> BACK TO CONTROL
+            </button>
+            <button onclick="showAnswerPresentation()" class="glass-btn glass-btn-show">
+                <i class="fas fa-check-circle"></i> SHOW ANSWER
+            </button>
+        </div>
+    </div>
+    
+    <script src="firebase-config.js"></script>
+    <script src="teacher-simple.js"></script>
+</body>
+</html>
