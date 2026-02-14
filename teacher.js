@@ -1,8 +1,11 @@
 // ============================================
-// teacher.js - С ДЕТАЛЬНЫМ ЛОГИРОВАНИЕМ
+// teacher.js - ПОЛНАЯ РАБОЧАЯ ВЕРСИЯ
 // ============================================
 
 console.log("🔥 teacher.js загружается...");
+console.log("📊 Проверка глобальных переменных при загрузке:");
+console.log("   window.db =", window.db);
+console.log("   window.QUIZ_DATA =", window.QUIZ_DATA ? "✅ есть" : "❌ нет");
 
 let currentGameId = null;
 let currentQuestionIndex = 0;
@@ -26,7 +29,16 @@ let correctCount, answeredCount2, noobTranslations, noobWrong;
 // ИНИЦИАЛИЗАЦИЯ ПОСЛЕ ЗАГРУЗКИ
 document.addEventListener('DOMContentLoaded', function() {
     console.log("🚀 Teacher panel initializing...");
-    console.log("📊 Проверка Firebase:", typeof firebase !== 'undefined' ? '✅ Есть' : '❌ Нет');
+    
+    // ✅ ВАЖНО: Берём db из глобальной переменной
+    if (window.db) {
+        db = window.db;
+        console.log("✅ db получена из window.db");
+    } else {
+        console.error("❌ window.db не определена! Firebase не инициализирован");
+    }
+    
+    console.log("📊 Проверка Firebase:", db ? '✅ Есть' : '❌ Нет');
     console.log("📊 Проверка QUIZ_DATA:", typeof QUIZ_DATA !== 'undefined' ? '✅ Есть' : '❌ Нет');
     
     // Получаем ссылки на элементы DOM
@@ -89,18 +101,6 @@ document.addEventListener('DOMContentLoaded', function() {
     noobWrong = document.getElementById('noobWrong');
     console.log("   - noobWrong:", noobWrong ? '✅ Найден' : '❌ НЕ НАЙДЕН');
     
-    // Проверяем Firebase
-    if (typeof firebase !== 'undefined') {
-        try {
-            db = firebase.database();
-            console.log("✅ Firebase подключен, database доступна");
-        } catch (error) {
-            console.error("❌ Ошибка Firebase:", error);
-        }
-    } else {
-        console.error("❌ Firebase не загружен! Проверь подключение в teacher.html");
-    }
-    
     // Загружаем вопросы
     if (window.QUIZ_DATA) {
         console.log(`✅ QUIZ_DATA загружен, вопросов: ${QUIZ_DATA.questions.length}`);
@@ -110,6 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     console.log("✅ Инициализация завершена, ожидаю действий...");
+    console.log("📊 Итоговое состояние: db =", db ? "✅ есть" : "❌ нет");
 });
 
 // ============================================
@@ -132,7 +133,6 @@ function startNewGame() {
     // ПРОВЕРКА 2: Есть ли QUIZ_DATA?
     if (!window.QUIZ_DATA) {
         console.error("❌ ОШИБКА: QUIZ_DATA не найден!");
-        console.log("   Проверь: firebase-config.js загрузился?");
         alert("❌ Вопросы не загружены! Открой консоль");
         return;
     }
@@ -149,33 +149,21 @@ function startNewGame() {
     totalPlayersCount = 0;
     noobRequests = { translations: 0, wrongAnswers: 0 };
     
-    // ПРОВЕРКА 3: Есть ли DOM-элементы?
-    console.log("🔍 Проверка DOM-элементов перед обновлением:");
-    console.log("   - startSection существует:", !!startSection);
-    console.log("   - gameControls существует:", !!gameControls);
-    console.log("   - gameCodeDisplay существует:", !!gameCodeDisplay);
-    
     // Обновляем UI
     try {
         if (startSection) {
             startSection.style.display = 'none';
             console.log("✅ startSection скрыт");
-        } else {
-            console.warn("⚠️ startSection не найден, пропускаем");
         }
         
         if (gameControls) {
             gameControls.style.display = 'block';
             console.log("✅ gameControls показан");
-        } else {
-            console.warn("⚠️ gameControls не найден, пропускаем");
         }
         
         if (gameCodeDisplay) {
             gameCodeDisplay.textContent = code;
             console.log("✅ gameCodeDisplay обновлён:", code);
-        } else {
-            console.warn("⚠️ gameCodeDisplay не найден, пропускаем");
         }
         
         if (currentQ) {
@@ -209,9 +197,6 @@ function startNewGame() {
     };
     
     console.log("📦 Данные для сохранения:", gameData);
-    
-    // ПРОВЕРКА 4: Есть ли ссылка на Realtime Database?
-    console.log("🔍 Проверка db.ref:", typeof db.ref === 'function' ? '✅ функция' : '❌ не функция');
     
     // Сохраняем в Firebase
     console.log("📤 Отправка в Firebase...");
@@ -401,6 +386,71 @@ function startNextQuestion() {
     });
 }
 
+function startAnswerTracking(questionId) {
+    if (!currentGameId || !questionId || !db) return;
+    
+    currentQuestionId = questionId;
+    
+    // Отписываемся от предыдущего слушателя
+    if (answersListener) {
+        db.ref(`games/${currentGameId}/answers/${currentQuestionId}`).off('value', answersListener);
+    }
+    
+    // Слушаем новые ответы
+    answersListener = db.ref(`games/${currentGameId}/answers/${questionId}`).on('value', snapshot => {
+        const answers = snapshot.val() || {};
+        updateAnswerStats(answers);
+    });
+}
+
+function updateAnswerStats(answers) {
+    const totalAnswers = Object.keys(answers).length;
+    let correctAnswers = 0;
+    
+    Object.values(answers).forEach(answer => {
+        if (answer.isCorrect) {
+            correctAnswers++;
+        }
+    });
+    
+    // Обновляем статистику
+    if (answeredCount) answeredCount.textContent = totalAnswers;
+    if (answeredCount2) answeredCount2.textContent = totalAnswers;
+    if (correctCount) correctCount.textContent = correctAnswers;
+    
+    // Если все ответили, показываем уведомление
+    if (totalPlayersCount > 0 && totalAnswers >= totalPlayersCount) {
+        const percentage = Math.round((correctAnswers / totalAnswers) * 100);
+        showNotification(`✅ All answered! Correct: ${percentage}%`, "success");
+    }
+    
+    // Обновляем статистику в основном интерфейсе
+    updateStatsDisplay(totalAnswers, correctAnswers, totalPlayersCount);
+}
+
+function updateStatsDisplay(total, correct, totalPlayers) {
+    if (!statsContent) return;
+    
+    const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
+    
+    statsContent.innerHTML = `
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div style="color: #4facfe;">${total}/${totalPlayers}</div>
+                <div>Answered</div>
+            </div>
+            <div class="stat-item">
+                <div style="color: #43e97b;">${correct}</div>
+                <div>Correct</div>
+            </div>
+            <div class="stat-item">
+                <div style="color: #f093fb;">${percentage}%</div>
+                <div>Success</div>
+            </div>
+        </div>
+    `;
+}
+
 // ============================================
 // 🖥️ РЕЖИМ ПРЕЗЕНТАЦИИ
 // ============================================
@@ -439,12 +489,23 @@ function exitPresentation() {
     
     if (!mainInterface || !presentationMode) return;
     
+    // Останавливаем слежение за ответами
+    if (answersListener && currentQuestionId && db) {
+        db.ref(`games/${currentGameId}/answers/${currentQuestionId}`).off('value', answersListener);
+        answersListener = null;
+    }
+    
     // Возвращаемся к основному интерфейсу
     presentationMode.classList.remove('active');
     presentationMode.style.display = 'none';
     mainInterface.style.display = 'flex';
     
-    console.log("✅ Выход из презентации");
+    // Обновляем статус игры
+    if (currentGameId && db) {
+        db.ref('games/' + currentGameId).update({
+            status: "lobby"
+        });
+    }
 }
 
 function showAnswerPresentation() {
@@ -503,6 +564,11 @@ function resetGame() {
         db.ref('games/' + currentGameId).remove();
     }
     
+    // Останавливаем все слушатели
+    if (answersListener && currentQuestionId && db) {
+        db.ref(`games/${currentGameId}/answers/${currentQuestionId}`).off('value', answersListener);
+    }
+    
     // Сбрасываем всё
     currentGameId = null;
     currentQuestionIndex = 0;
@@ -520,6 +586,16 @@ function resetGame() {
         statsContent.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><p>Statistics will appear after answers</p></div>';
     }
     if (currentQ) currentQ.textContent = '0/30';
+    if (noobTranslations) noobTranslations.textContent = '0';
+    if (noobWrong) noobWrong.textContent = '0';
+    
+    // Отписываемся от слушателей
+    if (playersListener && db && currentGameId) {
+        db.ref(`games/${currentGameId}/players`).off('value', playersListener);
+    }
+    if (gameListener && db && currentGameId) {
+        db.ref(`games/${currentGameId}`).off('value', gameListener);
+    }
     
     console.log("✅ Игра сброшена");
     showNotification("Game reset", "info");
@@ -551,10 +627,15 @@ function updateQuestionsList() {
         if (isCurrent) statusClass = 'active';
         else if (isCompleted) statusClass = 'completed';
         
+        let difficultyColor = '';
+        if (q.difficulty === 'easy') difficultyColor = '#43e97b';
+        else if (q.difficulty === 'medium') difficultyColor = '#f093fb';
+        else difficultyColor = '#ff416c';
+        
         return `
             <div class="question-item ${statusClass}" onclick="selectQuestion(${index})">
                 <div style="font-size: 1.3rem; font-weight: 700; margin-bottom: 5px;">${index + 1}</div>
-                <div style="font-size: 0.7rem; color: ${q.difficulty === 'easy' ? '#43e97b' : q.difficulty === 'medium' ? '#f093fb' : '#ff416c'};">${q.difficulty}</div>
+                <div style="font-size: 0.7rem; color: ${difficultyColor};">${q.difficulty}</div>
                 <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 5px;">
                     ${isCurrent ? '🔴' : isCompleted ? '✅' : '⏳'}
                 </div>
@@ -575,6 +656,58 @@ function selectQuestion(index) {
     
     currentQuestionIndex = index;
     startNextQuestion();
+}
+
+// ============================================
+// 🔍 СЛУШАТЬ ИЗМЕНЕНИЯ ИГРЫ
+// ============================================
+
+function listenToGameChanges() {
+    if (!currentGameId || !db) return;
+    
+    if (gameListener) {
+        db.ref(`games/${currentGameId}`).off('value', gameListener);
+    }
+    
+    gameListener = db.ref(`games/${currentGameId}`).on('value', snapshot => {
+        const game = snapshot.val();
+        if (!game) return;
+        
+        console.log("📊 Статус игры:", game.status);
+    });
+}
+
+// ============================================
+// 🤓 СЛУШАТЬ ЗАПРОСЫ ЧАЙНИКОВ
+// ============================================
+
+function listenToNoobRequests() {
+    console.log("🤓 listenToNoobRequests");
+    
+    if (!currentGameId || !db) {
+        console.warn("   Нет currentGameId или db, пропускаем");
+        return;
+    }
+    
+    db.ref(`noob_requests/${currentGameId}`).on('child_added', snapshot => {
+        const request = snapshot.val();
+        console.log("📨 Получен запрос от чайника:", request);
+        
+        if (request.type === 'translation') {
+            noobRequests.translations++;
+            if (noobTranslations) noobTranslations.textContent = noobRequests.translations;
+            console.log(`   Запросов перевода: ${noobRequests.translations}`);
+        }
+        
+        if (request.type === 'wrong_answer') {
+            noobRequests.wrongAnswers++;
+            if (noobWrong) noobWrong.textContent = noobRequests.wrongAnswers;
+            console.log(`   Неправильных ответов: ${noobRequests.wrongAnswers}`);
+        }
+        
+        // Удаляем обработанный запрос
+        snapshot.ref.remove();
+    });
 }
 
 // ============================================
@@ -641,39 +774,6 @@ style.textContent = `
 if (!document.getElementById('notification-styles')) {
     style.id = 'notification-styles';
     document.head.appendChild(style);
-}
-
-// ============================================
-// 🤓 СЛУШАТЬ ЗАПРОСЫ ЧАЙНИКОВ
-// ============================================
-
-function listenToNoobRequests() {
-    console.log("🤓 listenToNoobRequests");
-    
-    if (!currentGameId || !db) {
-        console.warn("   Нет currentGameId или db, пропускаем");
-        return;
-    }
-    
-    db.ref(`noob_requests/${currentGameId}`).on('child_added', snapshot => {
-        const request = snapshot.val();
-        console.log("📨 Получен запрос от чайника:", request);
-        
-        if (request.type === 'translation') {
-            noobRequests.translations++;
-            if (noobTranslations) noobTranslations.textContent = noobRequests.translations;
-            console.log(`   Запросов перевода: ${noobRequests.translations}`);
-        }
-        
-        if (request.type === 'wrong_answer') {
-            noobRequests.wrongAnswers++;
-            if (noobWrong) noobWrong.textContent = noobRequests.wrongAnswers;
-            console.log(`   Неправильных ответов: ${noobRequests.wrongAnswers}`);
-        }
-        
-        // Удаляем обработанный запрос
-        snapshot.ref.remove();
-    });
 }
 
 // ============================================
