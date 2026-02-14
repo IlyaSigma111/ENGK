@@ -1,23 +1,18 @@
 // ============================================
-// student-simple.js - С РАБОЧИМ TELEGRAM БОТОМ
+// student.js - ЧИСТАЯ ВЕРСИЯ БЕЗ ЧАЙНИКОВ
 // ============================================
 
-console.log("🔥 student-simple.js загружается...");
+console.log("🔥 student.js загружается...");
 
 let currentGameId = null;
 let playerName = null;
 let currentQuestion = null;
 let hasAnswered = false;
 let db = null;
-let noobRequests = 0;
-
-// Конфиг Telegram
-const TELEGRAM_BOT_TOKEN = "8110893337:AAEXbYtRyyrt_k1oAwjsOhOBUsdPnGCH_oM";
-const TELEGRAM_CHAT_ID = "1512777396";
 
 // Элементы DOM
 let joinScreen, waitingScreen, questionScreen, resultScreen;
-let joinButton, errorContainer, notificationContainer, noobButton;
+let joinButton, errorContainer, notificationContainer;
 let displayName, displayCode, displayScore, roomPlayers;
 let currentQSpan, questionText, optionsContainer, answerStatus, resultContent;
 
@@ -28,9 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Получаем db из window
     if (window.db) {
         db = window.db;
-        console.log("✅ db получена из window.db");
-    } else {
-        console.error("❌ window.db не определена!");
+        console.log("✅ db получена");
     }
     
     // Получаем элементы DOM
@@ -42,7 +35,6 @@ document.addEventListener('DOMContentLoaded', function() {
     joinButton = document.getElementById('joinButton');
     errorContainer = document.getElementById('errorContainer');
     notificationContainer = document.getElementById('notificationContainer');
-    noobButton = document.getElementById('noobButton');
     
     displayName = document.getElementById('displayName');
     displayCode = document.getElementById('displayCode');
@@ -60,13 +52,6 @@ document.addEventListener('DOMContentLoaded', function() {
         joinButton.addEventListener('click', function(e) {
             e.preventDefault();
             joinGame();
-        });
-    }
-    
-    if (noobButton) {
-        noobButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            handleNoobButtonClick();
         });
     }
     
@@ -96,152 +81,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log("✅ Инициализация завершена");
 });
-
-// ============================================
-// 🤓 ОБРАБОТКА КНОПКИ ЧАЙНИКА
-// ============================================
-
-function handleNoobButtonClick() {
-    console.log("🤓 handleNoobButtonClick");
-    
-    if (!currentGameId || !playerName) {
-        showNotification("❌ Join a game first!", "error");
-        return;
-    }
-    
-    if (!currentQuestion) {
-        showNotification("❌ No active question!", "error");
-        return;
-    }
-    
-    requestTranslation();
-}
-
-function requestTranslation() {
-    console.log("🤓 requestTranslation");
-    
-    noobRequests++;
-    
-    // Отправляем в Firebase
-    if (db && currentGameId) {
-        const requestData = {
-            playerName: playerName,
-            type: 'translation',
-            questionData: {
-                id: currentQuestion.id,
-                text: currentQuestion.text
-            },
-            timestamp: Date.now(),
-            gameId: currentGameId
-        };
-        
-        db.ref(`noob_requests/${currentGameId}`).push(requestData)
-            .then(() => {
-                console.log("✅ Запрос в Firebase отправлен");
-                showNotification("🌐 Translation requested!", "warning");
-                
-                // Показываем перевод
-                const translatedText = simpleTranslate(currentQuestion.text);
-                showNotification(`📝 ${translatedText}`, "info");
-                
-                // Отправляем в Telegram
-                sendToTelegram('translation', {
-                    playerName: playerName,
-                    gameId: currentGameId,
-                    questionId: currentQuestion.id,
-                    questionText: currentQuestion.text
-                });
-            })
-            .catch(error => {
-                console.error("❌ Ошибка Firebase:", error);
-                showNotification("❌ Failed to send request", "error");
-            });
-    }
-}
-
-// ============================================
-// 📤 ОТПРАВКА В TELEGRAM
-// ============================================
-
-function sendToTelegram(type, data) {
-    console.log(`📤 Отправка в Telegram (${type}):`, data);
-    
-    let message = '';
-    
-    if (type === 'translation') {
-        message = `🤓 <b>ЗАПРОС ПЕРЕВОДА</b>\n`;
-        message += `👤 Игрок: ${data.playerName}\n`;
-        message += `🆔 Игра: ${data.gameId}\n`;
-        message += `🔢 Вопрос: ${data.questionId}\n`;
-        message += `📝 Текст: ${data.questionText}\n`;
-        message += `⏰ Время: ${new Date().toLocaleString('ru-RU')}`;
-    }
-    
-    if (type === 'wrong_answer') {
-        message = `❌ <b>ОШИБКА ЧАЙНИКА</b>\n`;
-        message += `👤 Игрок: ${data.playerName}\n`;
-        message += `🆔 Игра: ${data.gameId}\n`;
-        message += `🔢 Вопрос: ${data.questionId}\n`;
-        message += `📝 Текст: ${data.questionText}\n`;
-        message += `❌ Выбрал: ${data.selectedOption}\n`;
-        message += `✅ Правильно: ${data.correctOption}`;
-    }
-    
-    // СПОСОБ 1: Через JSONP (работает везде)
-    sendViaJsonP(message);
-    
-    // СПОСОБ 2: Через скрытый iframe (запасной)
-    setTimeout(() => sendViaIframe(message), 500);
-}
-
-// Способ 1: JSONP
-function sendViaJsonP(message) {
-    const callbackName = 'tg_callback_' + Date.now();
-    const script = document.createElement('script');
-    
-    // Создаём временную функцию
-    window[callbackName] = function(response) {
-        console.log("✅ JSONP ответ:", response);
-        delete window[callbackName];
-        script.remove();
-    };
-    
-    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage` +
-                `?chat_id=${TELEGRAM_CHAT_ID}` +
-                `&text=${encodeURIComponent(message)}` +
-                `&parse_mode=HTML` +
-                `&callback=${callbackName}`;
-    
-    script.src = url;
-    document.head.appendChild(script);
-    
-    // Таймаут на случай ошибки
-    setTimeout(() => {
-        if (window[callbackName]) {
-            console.log("⚠️ JSONP таймаут");
-            delete window[callbackName];
-            script.remove();
-        }
-    }, 5000);
-}
-
-// Способ 2: Iframe
-function sendViaIframe(message) {
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    
-    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage` +
-                `?chat_id=${TELEGRAM_CHAT_ID}` +
-                `&text=${encodeURIComponent(message)}` +
-                `&parse_mode=HTML`;
-    
-    iframe.src = url;
-    document.body.appendChild(iframe);
-    
-    setTimeout(() => {
-        iframe.remove();
-    }, 3000);
-}
 
 // ============================================
 // 🎮 ОСНОВНЫЕ ФУНКЦИИ
@@ -285,6 +124,7 @@ function joinGame() {
         joinButton.disabled = true;
     }
     
+    // Проверяем существование игры
     db.ref(`games/${currentGameId}`).once('value')
         .then(snapshot => {
             if (!snapshot.exists()) {
@@ -293,28 +133,30 @@ function joinGame() {
             
             const game = snapshot.val();
             
-            if (game.status === "finished") {
-                throw new Error("This game is already finished");
+            if (game.finished) {
+                throw new Error("This game has already finished");
             }
             
             if (game.players && game.players[name]) {
                 throw new Error("Player with this name already exists!");
             }
             
+            // Регистрируем игрока
             return db.ref(`games/${currentGameId}/players/${name}`).set({
                 name: name,
                 joined: Date.now(),
-                score: 0,
-                noobRequests: 0
+                score: 0
             });
         })
         .then(() => {
+            console.log("✅ Игрок зарегистрирован");
+            
             if (displayName) displayName.textContent = name;
             if (displayCode) displayCode.textContent = code;
             
             switchScreen('waiting');
             listenToGame();
-            listenToNotifications();
+            listenToGameStatus();
             
             if (joinButton) {
                 joinButton.innerHTML = '<i class="fas fa-gamepad"></i> JOIN GAME';
@@ -330,22 +172,9 @@ function joinGame() {
         });
 }
 
-function simpleTranslate(text) {
-    const translations = {
-        "How do you translate the word 'fear' into Russian?": "Как переводится 'fear'?",
-        "What does the word 'spider' mean in Russian?": "Что значит 'spider'?",
-        "How do you say 'тьма' in English?": "Как сказать 'тьма'?",
-        "What is the English word for 'высота'?": "Как будет 'высота'?",
-        "How do you translate 'толпа' into English?": "Перевод 'толпа'?",
-        "What does 'snake' mean in Russian?": "Что значит 'snake'?",
-        "How do you say 'полёт' in English?": "Как сказать 'полёт'?",
-        "What is the English for 'публичная речь'?": "Как будет 'публичная речь'?",
-        "How do you translate 'буря' into English?": "Перевод 'буря'?",
-        "What does 'alone' mean in Russian?": "Что значит 'alone'?"
-    };
-    
-    return translations[text] || "Translation not available";
-}
+// ============================================
+// 🎮 СЛУШАТЬ ИГРУ
+// ============================================
 
 function listenToGame() {
     if (!currentGameId || !db) return;
@@ -357,9 +186,11 @@ function listenToGame() {
             return;
         }
         
+        // Обновляем количество игроков
         const players = game.players || {};
         if (roomPlayers) roomPlayers.textContent = Object.keys(players).length;
         
+        // Обновляем счет
         if (players[playerName] && displayScore) {
             displayScore.textContent = players[playerName].score || 0;
         }
@@ -389,15 +220,26 @@ function listenToGame() {
     });
 }
 
-function listenToNotifications() {
-    if (!playerName || !db) return;
+// Слушаем статус игры для завершения
+function listenToGameStatus() {
+    if (!currentGameId || !db) return;
     
-    db.ref(`notifications/${playerName}`).on('child_added', snapshot => {
-        const notification = snapshot.val();
-        showNotification(notification.message, notification.message.includes('✅') ? 'success' : 'warning');
-        setTimeout(() => snapshot.ref.remove(), 5000);
+    db.ref(`games/${currentGameId}/finished`).on('value', snapshot => {
+        if (snapshot.val() === true) {
+            // Игра завершена, показываем сообщение
+            showNotification("🏁 Game finished! Check leaderboard with your teacher", "info");
+            
+            // Возвращаемся на экран входа через 3 секунды
+            setTimeout(() => {
+                leaveGame();
+            }, 3000);
+        }
     });
 }
+
+// ============================================
+// 📝 ОБРАБОТКА ВОПРОСОВ
+// ============================================
 
 function handleQuestion(questionId) {
     if (!QUIZ_DATA || !QUIZ_DATA.questions) return;
@@ -468,36 +310,6 @@ function selectAnswer(answerIndex) {
     
     const isCorrect = (answerIndex === currentQuestion.correct);
     
-    // Если неправильно - отправляем в Telegram
-    if (!isCorrect) {
-        console.log("❌ Неправильный ответ");
-        
-        // Отправляем в Firebase
-        if (db && currentGameId) {
-            db.ref(`noob_requests/${currentGameId}`).push({
-                playerName: playerName,
-                type: 'wrong_answer',
-                questionData: {
-                    id: currentQuestion.id,
-                    text: currentQuestion.text,
-                    selectedOption: currentQuestion.options[answerIndex],
-                    correctOption: currentQuestion.options[currentQuestion.correct]
-                },
-                timestamp: Date.now()
-            });
-        }
-        
-        // Отправляем в Telegram
-        sendToTelegram('wrong_answer', {
-            playerName: playerName,
-            gameId: currentGameId,
-            questionId: currentQuestion.id,
-            questionText: currentQuestion.text,
-            selectedOption: currentQuestion.options[answerIndex],
-            correctOption: currentQuestion.options[currentQuestion.correct]
-        });
-    }
-    
     db.ref(`games/${currentGameId}/answers/${currentQuestion.id}/${playerName}`).set({
         answerIndex: answerIndex,
         isCorrect: isCorrect,
@@ -562,6 +374,10 @@ function showResults(questionId) {
         });
 }
 
+// ============================================
+// 🔄 ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ============================================
+
 function switchScreen(screenName) {
     const screens = {
         join: joinScreen,
@@ -589,7 +405,6 @@ function leaveGame() {
     playerName = null;
     currentQuestion = null;
     hasAnswered = false;
-    noobRequests = 0;
     
     const nameInput = document.getElementById('playerName');
     const codeInput = document.getElementById('gameCode');
@@ -617,8 +432,7 @@ function showNotification(message, type = 'info') {
     const colors = {
         info: '#4facfe',
         success: '#43e97b',
-        error: '#ff416c',
-        warning: '#f093fb'
+        error: '#ff416c'
     };
     
     const notification = document.createElement('div');
@@ -639,8 +453,6 @@ function showNotification(message, type = 'info') {
 
 window.joinGame = joinGame;
 window.leaveGame = leaveGame;
-window.requestTranslation = requestTranslation;
 window.selectAnswer = selectAnswer;
-window.handleNoobButtonClick = handleNoobButtonClick;
 
-console.log("✅ student-simple.js загружен");
+console.log("✅ student.js загружен");
