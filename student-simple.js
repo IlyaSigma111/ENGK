@@ -1,5 +1,5 @@
 // ============================================
-// student.js - ЧИСТАЯ ВЕРСИЯ БЕЗ ЧАЙНИКОВ
+// student.js - ИСПРАВЛЕННАЯ ВЕРСИЯ
 // ============================================
 
 console.log("🔥 student.js загружается...");
@@ -24,6 +24,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.db) {
         db = window.db;
         console.log("✅ db получена");
+    } else {
+        console.error("❌ db не получена!");
     }
     
     // Получаем элементы DOM
@@ -92,10 +94,15 @@ function joinGame() {
     const nameInput = document.getElementById('playerName');
     const codeInput = document.getElementById('gameCode');
     
-    if (!nameInput || !codeInput) return;
+    if (!nameInput || !codeInput) {
+        console.error("❌ Поля ввода не найдены");
+        return;
+    }
     
     const name = nameInput.value.trim();
     const code = codeInput.value.trim();
+    
+    console.log("📝 Ввод:", { name, code });
     
     if (!name || name.length < 2) {
         showError("Enter your name (min 2 characters)");
@@ -110,6 +117,7 @@ function joinGame() {
     if (!db) {
         if (window.db) {
             db = window.db;
+            console.log("✅ db взята из window.db");
         } else {
             showError("Firebase not connected");
             return;
@@ -119,6 +127,8 @@ function joinGame() {
     playerName = name;
     currentGameId = "game_" + code;
     
+    console.log("🎮 Подключение к:", currentGameId);
+    
     if (joinButton) {
         joinButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CONNECTING...';
         joinButton.disabled = true;
@@ -127,21 +137,27 @@ function joinGame() {
     // Проверяем существование игры
     db.ref(`games/${currentGameId}`).once('value')
         .then(snapshot => {
+            console.log("📊 Ответ от Firebase:", snapshot.exists() ? "игра найдена" : "игра не найдена");
+            
             if (!snapshot.exists()) {
                 throw new Error(`Game with code ${code} not found!`);
             }
             
             const game = snapshot.val();
+            console.log("📊 Данные игры:", game);
             
-            if (game.finished) {
+            // Проверяем, не завершена ли игра
+            if (game.finished === true) {
                 throw new Error("This game has already finished");
             }
             
+            // Проверяем уникальность имени
             if (game.players && game.players[name]) {
                 throw new Error("Player with this name already exists!");
             }
             
             // Регистрируем игрока
+            console.log("📝 Регистрация игрока:", name);
             return db.ref(`games/${currentGameId}/players/${name}`).set({
                 name: name,
                 joined: Date.now(),
@@ -156,7 +172,6 @@ function joinGame() {
             
             switchScreen('waiting');
             listenToGame();
-            listenToGameStatus();
             
             if (joinButton) {
                 joinButton.innerHTML = '<i class="fas fa-gamepad"></i> JOIN GAME';
@@ -164,11 +179,16 @@ function joinGame() {
             }
         })
         .catch(error => {
+            console.error("❌ Ошибка:", error);
             showError(error.message);
+            
             if (joinButton) {
                 joinButton.innerHTML = '<i class="fas fa-gamepad"></i> JOIN GAME';
                 joinButton.disabled = false;
             }
+            
+            playerName = null;
+            currentGameId = null;
         });
 }
 
@@ -177,12 +197,30 @@ function joinGame() {
 // ============================================
 
 function listenToGame() {
-    if (!currentGameId || !db) return;
+    if (!currentGameId || !db) {
+        console.log("👂 Нет currentGameId или db");
+        return;
+    }
     
+    console.log("👂 Начинаем слушать игру:", currentGameId);
+    
+    // Слушаем изменения в игре
     db.ref(`games/${currentGameId}`).on('value', snapshot => {
         const game = snapshot.val();
+        console.log("📊 Обновление игры:", game?.status);
+        
         if (!game) {
+            console.log("Игра удалена");
+            showNotification("Game was deleted", "error");
             leaveGame();
+            return;
+        }
+        
+        // Проверяем, завершена ли игра
+        if (game.finished === true) {
+            console.log("🏁 Игра завершена");
+            showNotification("🏁 Game finished!", "info");
+            setTimeout(() => leaveGame(), 3000);
             return;
         }
         
@@ -190,13 +228,14 @@ function listenToGame() {
         const players = game.players || {};
         if (roomPlayers) roomPlayers.textContent = Object.keys(players).length;
         
-        // Обновляем счет
+        // Обновляем счет игрока
         if (players[playerName] && displayScore) {
             displayScore.textContent = players[playerName].score || 0;
         }
         
         const currentQuestionId = game.currentQuestion;
         
+        // Обрабатываем статус игры
         switch (game.status) {
             case "lobby":
             case "waiting":
@@ -207,6 +246,7 @@ function listenToGame() {
                 
             case "question_active":
                 if (currentQuestionId && (!currentQuestion || currentQuestion.id !== currentQuestionId)) {
+                    console.log("📝 Новый вопрос:", currentQuestionId);
                     handleQuestion(currentQuestionId);
                 }
                 break;
@@ -217,23 +257,8 @@ function listenToGame() {
                 }
                 break;
         }
-    });
-}
-
-// Слушаем статус игры для завершения
-function listenToGameStatus() {
-    if (!currentGameId || !db) return;
-    
-    db.ref(`games/${currentGameId}/finished`).on('value', snapshot => {
-        if (snapshot.val() === true) {
-            // Игра завершена, показываем сообщение
-            showNotification("🏁 Game finished! Check leaderboard with your teacher", "info");
-            
-            // Возвращаемся на экран входа через 3 секунды
-            setTimeout(() => {
-                leaveGame();
-            }, 3000);
-        }
+    }, error => {
+        console.error("❌ Ошибка слушателя:", error);
     });
 }
 
@@ -242,13 +267,21 @@ function listenToGameStatus() {
 // ============================================
 
 function handleQuestion(questionId) {
-    if (!QUIZ_DATA || !QUIZ_DATA.questions) return;
+    if (!QUIZ_DATA || !QUIZ_DATA.questions) {
+        console.error("❌ QUIZ_DATA не загружен");
+        return;
+    }
     
     const question = QUIZ_DATA.questions.find(q => q.id === questionId);
-    if (!question) return;
+    if (!question) {
+        console.error("❌ Вопрос не найден:", questionId);
+        return;
+    }
     
     currentQuestion = shuffleQuestion(question);
     hasAnswered = false;
+    
+    console.log("📝 Показываем вопрос:", currentQuestion.id);
     
     switchScreen('question');
     
@@ -297,8 +330,12 @@ function shuffleQuestion(question) {
 }
 
 function selectAnswer(answerIndex) {
-    if (hasAnswered || !currentQuestion || !currentGameId || !playerName || !db) return;
+    if (hasAnswered || !currentQuestion || !currentGameId || !playerName || !db) {
+        console.log("⛔ Нельзя выбрать ответ:", { hasAnswered, currentQuestion, currentGameId, playerName, db });
+        return;
+    }
     
+    console.log("✅ Выбран ответ:", answerIndex);
     hasAnswered = true;
     
     document.querySelectorAll('.option').forEach((opt, idx) => {
@@ -316,17 +353,17 @@ function selectAnswer(answerIndex) {
         timestamp: Date.now()
     }).then(() => {
         if (isCorrect) {
-            db.ref(`games/${currentGameId}/players/${playerName}/score`).transaction(score => {
+            return db.ref(`games/${currentGameId}/players/${playerName}/score`).transaction(score => {
                 return (score || 0) + (currentQuestion.points || 1);
             });
         }
-        
+    }).then(() => {
         if (answerStatus) {
             answerStatus.textContent = isCorrect ? "✅ CORRECT!" : "❌ WRONG";
             answerStatus.className = isCorrect ? "status correct" : "status wrong";
         }
     }).catch(error => {
-        console.error("Ошибка:", error);
+        console.error("❌ Ошибка отправки ответа:", error);
     });
 }
 
@@ -379,6 +416,8 @@ function showResults(questionId) {
 // ============================================
 
 function switchScreen(screenName) {
+    console.log("📱 Переход на экран:", screenName);
+    
     const screens = {
         join: joinScreen,
         waiting: waitingScreen,
@@ -397,6 +436,8 @@ function switchScreen(screenName) {
 }
 
 function leaveGame() {
+    console.log("👋 Выход из игры");
+    
     if (currentGameId && playerName && db) {
         db.ref(`games/${currentGameId}/players/${playerName}`).remove();
     }
@@ -416,6 +457,8 @@ function leaveGame() {
 }
 
 function showError(message) {
+    console.error("❌ Ошибка:", message);
+    
     if (errorContainer) {
         errorContainer.innerHTML = `
             <div class="error">
@@ -423,10 +466,14 @@ function showError(message) {
             </div>
         `;
         setTimeout(() => { errorContainer.innerHTML = ''; }, 5000);
+    } else {
+        alert(message);
     }
 }
 
 function showNotification(message, type = 'info') {
+    console.log(`🔔 Уведомление: ${message}`);
+    
     if (!notificationContainer) return;
     
     const colors = {
@@ -437,7 +484,7 @@ function showNotification(message, type = 'info') {
     
     const notification = document.createElement('div');
     notification.className = 'notification';
-    notification.style.borderLeftColor = colors[type];
+    notification.style.borderLeftColor = colors[type] || colors.info;
     notification.innerHTML = message;
     
     notificationContainer.appendChild(notification);
