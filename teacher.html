@@ -6,9 +6,9 @@
     <title>Teacher Panel - English Quiz</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- ===== FIREBASE SDK ===== -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js"></script>
+    <!-- ===== FIREBASE SDK 8.x (совместимая версия) ===== -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     
     <style>
         /* СТИЛИ */
@@ -17,95 +17,309 @@
             padding: 0;
             box-sizing: border-box;
         }
+
+        :root {
+            --primary-color: #4facfe;
+            --secondary-color: #f093fb;
+            --success-color: #43e97b;
+            --danger-color: #ff416c;
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.15);
+        }
+
         body {
             font-family: 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
             color: white;
             height: 100vh;
             overflow: hidden;
+            position: relative;
         }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(79, 172, 254, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(240, 147, 251, 0.15) 0%, transparent 50%);
+            z-index: -1;
+        }
+
         #mainInterface {
             display: flex;
             flex-direction: column;
             height: 100vh;
         }
+
         .teacher-header {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(20px);
             padding: 20px 40px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            flex-shrink: 0;
         }
+
         .header-left h1 {
             margin: 0;
+            font-size: 1.8rem;
             background: linear-gradient(135deg, #4facfe, #00f2fe);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+
+        .header-left p {
+            margin: 8px 0 0;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
         .game-code-box {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(79,172,254,0.3);
+            border: 1px solid rgba(79, 172, 254, 0.3);
             border-radius: 16px;
             padding: 12px 25px;
             display: flex;
             align-items: center;
             gap: 20px;
         }
+
+        .code-label {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
         .code-display {
             font-family: 'Courier New', monospace;
             font-size: 2rem;
+            font-weight: 900;
             color: #43e97b;
             min-width: 180px;
             text-align: center;
         }
+
         .main-content {
             display: flex;
             flex: 1;
             padding: 30px;
             gap: 30px;
+            overflow: hidden;
         }
-        .left-column, .right-column {
-            flex: 1;
+
+        .left-column {
+            width: 35%;
             display: flex;
             flex-direction: column;
             gap: 30px;
+            overflow: hidden;
         }
+
+        .right-column {
+            width: 65%;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            overflow: hidden;
+        }
+
         .glass-panel {
-            background: rgba(255,255,255,0.08);
+            background: rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(20px);
             border-radius: 24px;
             padding: 25px;
-            border: 1px solid rgba(255,255,255,0.15);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.3s;
         }
+
+        .glass-panel h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 15px;
+        }
+
         .glass-btn {
             width: 100%;
             padding: 18px;
             border: 2px solid transparent;
             border-radius: 16px;
-            background: rgba(255,255,255,0.08);
+            background: rgba(255, 255, 255, 0.08);
             color: white;
             font-size: 1.1rem;
+            font-weight: 600;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 12px;
             transition: all 0.3s;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
         }
+
+        .glass-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.6s;
+        }
+
+        .glass-btn:hover::before {
+            left: 100%;
+        }
+
         .glass-btn-create {
-            background: rgba(79,172,254,0.15);
-            border-color: rgba(79,172,254,0.5);
+            background: rgba(79, 172, 254, 0.15);
+            border-color: rgba(79, 172, 254, 0.5);
         }
+
         .glass-btn:hover {
             transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
         }
+
         .empty-state {
             text-align: center;
+            padding: 40px 20px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .empty-icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+
+        .questions-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .question-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+
+        .question-item:hover {
+            background: rgba(79, 172, 254, 0.15);
+            transform: translateY(-3px);
+            border-color: rgba(79, 172, 254, 0.3);
+        }
+
+        .players-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .player-card {
+            background: rgba(79, 172, 254, 0.1);
+            border: 1px solid rgba(79, 172, 254, 0.3);
+            border-radius: 16px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .player-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            border-radius: 50%;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .player-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .player-score {
+            color: #43e97b;
+            font-weight: 600;
+        }
+
+        /* Презентация */
+        .presentation-mode {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #0f0c29, #302b63);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+        }
+
+        .presentation-mode.active {
+            display: flex;
+        }
+
+        .presentation-header {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .presentation-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             padding: 40px;
-            color: rgba(255,255,255,0.5);
+        }
+
+        .presentation-question {
+            max-width: 900px;
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(30px);
+            border-radius: 32px;
+            padding: 50px;
+        }
+
+        .presentation-question h2 {
+            font-size: 2.5rem;
+            text-align: center;
+            margin: 0;
+        }
+
+        .presentation-controls {
+            padding: 20px 40px;
+            background: rgba(0,0,0,0.2);
+            backdrop-filter: blur(20px);
+            display: flex;
+            justify-content: center;
+            gap: 20px;
         }
     </style>
 </head>
@@ -114,7 +328,7 @@
         <header class="teacher-header">
             <div class="header-left">
                 <h1>🇬🇧 TEACHER PANEL</h1>
-                <p>English: Fears and Phobias</p>
+                <p>English: Fears and Phobias | Quiz Management</p>
             </div>
             <div class="game-code-box">
                 <span class="code-label">GAME CODE:</span>
@@ -125,58 +339,95 @@
         <div class="main-content">
             <div class="left-column">
                 <div class="glass-panel">
-                    <h2>GAME CONTROL</h2>
+                    <h2><i class="fas fa-gamepad"></i> GAME CONTROL</h2>
+                    
                     <div id="startSection">
+                        <p style="margin-bottom: 20px;">Start a new quiz for your class</p>
                         <button onclick="startNewGame()" class="glass-btn glass-btn-create">
-                            CREATE NEW GAME
+                            <i class="fas fa-plus-circle"></i> CREATE NEW GAME
                         </button>
                     </div>
-                    <div id="gameControls" style="display:none;">
-                        <!-- скрыто пока -->
+
+                    <div id="gameControls" style="display: none;">
+                        <div style="display: grid; gap: 15px;">
+                            <button onclick="startNextQuestion()" class="glass-btn glass-btn-create">
+                                <i class="fas fa-play"></i> SHOW QUESTION
+                            </button>
+                            <button onclick="showAnswer()" class="glass-btn glass-btn-create">
+                                <i class="fas fa-eye"></i> SHOW ANSWER
+                            </button>
+                            <button onclick="nextQuestion()" class="glass-btn glass-btn-create">
+                                <i class="fas fa-forward"></i> NEXT QUESTION
+                            </button>
+                            <button onclick="resetGame()" class="glass-btn glass-btn-create">
+                                <i class="fas fa-redo"></i> RESET GAME
+                            </button>
+                        </div>
+                        
+                        <div style="background: rgba(79,172,254,0.1); border-radius: 16px; padding: 15px; margin-top: 20px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Current Question:</span>
+                                <span id="currentQ" style="color: #43e97b;">0/30</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                                <span>Players Online:</span>
+                                <span id="playerCount" style="color: #4facfe;">0</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
                 <div class="glass-panel">
-                    <h2>PLAYERS</h2>
-                    <div id="playersList" class="empty-state">👤 No players yet</div>
+                    <h2><i class="fas fa-users"></i> PLAYERS</h2>
+                    <div id="playersList" class="empty-state">
+                        <div class="empty-icon">👤</div>
+                        <p>Players will appear here after joining</p>
+                    </div>
                 </div>
             </div>
+
             <div class="right-column">
                 <div class="glass-panel">
-                    <h2>STATISTICS</h2>
-                    <div id="statsContent" class="empty-state">📊 Waiting for answers</div>
+                    <h2><i class="fas fa-chart-bar"></i> STATISTICS</h2>
+                    <div id="statsContent" class="empty-state">
+                        <div class="empty-icon">📊</div>
+                        <p>Statistics will appear after answers</p>
+                    </div>
                 </div>
+
                 <div class="glass-panel">
-                    <h2>QUESTIONS</h2>
-                    <div id="questionsList" class="empty-state">📚 Loading questions...</div>
+                    <h2><i class="fas fa-list-ol"></i> ALL QUESTIONS (30)</h2>
+                    <div id="questionsList" class="questions-list">
+                        <!-- Вопросы загрузятся через JS -->
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ===== ДИАГНОСТИЧЕСКИЙ СКРИПТ ===== -->
-    <script>
-        console.log("🔍 ДИАГНОСТИКА teacher.html:");
-        console.log("1. Проверка загрузки Firebase SDK:");
-        console.log("   - firebase-app.js:", typeof firebase !== 'undefined' ? '✅ ЗАГРУЖЕН' : '❌ НЕ ЗАГРУЖЕН');
-        
-        if (typeof firebase !== 'undefined') {
-            console.log("2. Версия Firebase SDK:", firebase.SDK_VERSION || 'неизвестно');
-            console.log("3. Доступные модули:");
-            console.log("   - database:", typeof firebase.database === 'function' ? '✅ ЕСТЬ' : '❌ НЕТ');
-        }
-    </script>
+    <!-- Презентация -->
+    <div id="presentationMode" class="presentation-mode">
+        <div class="presentation-header">
+            <span class="presentation-label">PRESENTATION MODE</span>
+            <span>Question <span id="presentationQNum">1</span>/30</span>
+        </div>
+        <div class="presentation-content">
+            <div id="presentationQuestion" class="presentation-question">
+                <h2>Question will appear here</h2>
+            </div>
+        </div>
+        <div class="presentation-controls">
+            <button onclick="exitPresentation()" class="glass-btn">BACK</button>
+            <button onclick="showAnswerPresentation()" class="glass-btn">SHOW ANSWER</button>
+        </div>
+    </div>
 
-    <!-- ===== НАШ КОНФИГ ===== -->
-    <script src="firebase-config.js"></script>
+    <!-- ===== FIREBASE 8.x ===== -->
+    <script>
+        console.log("🔍 Диагностика загрузки Firebase 8.x:");
+    </script>
     
-    <!-- ===== ЕЩЁ ДИАГНОСТИКА ===== -->
-    <script>
-        console.log("🔍 ДИАГНОСТИКА после firebase-config.js:");
-        console.log("   - window.db =", window.db);
-        console.log("   - window.QUIZ_DATA =", window.QUIZ_DATA ? '✅ ЕСТЬ' : '❌ НЕТ');
-    </script>
-
-    <!-- ===== TEACHER.JS ===== -->
+    <script src="firebase-config.js"></script>
     <script src="teacher.js"></script>
 </body>
 </html>
