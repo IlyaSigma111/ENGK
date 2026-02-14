@@ -31,7 +31,7 @@ try {
         
         // ✅ СОХРАНЯЕМ ССЫЛКУ НА DATABASE В ГЛОБАЛЬНУЮ ПЕРЕМЕННУЮ
         window.db = firebase.database();
-        console.log("✅ Firebase database доступна");
+        console.log("✅ Firebase database доступна по адресу:", window.db);
         
         // Проверяем, что db работает
         if (window.db) {
@@ -41,6 +41,9 @@ try {
         }
     } else {
         console.error("❌ Firebase не загружен! Проверь подключение в HTML");
+        console.log("   Убедись, что в teacher.html есть строки:");
+        console.log('   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>');
+        console.log('   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js"></script>');
     }
 } catch (error) {
     console.error("❌ Ошибка Firebase:", error);
